@@ -143,14 +143,35 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     await query.answer()  # dismiss the loading spinner
 
-    data = query.data  # e.g. "apply:42", "skip:42", "ask:42"
+    data = query.data  # e.g. "apply:42", "skip:42", "user_approve:5"
     parts = data.split(":", 1)
     if len(parts) != 2:
         return
 
-    action, job_id_str = parts
+    action, value_str = parts
+
+    # ── User approval/rejection ─────────────────────────────────────
+    if action in ("user_approve", "user_reject"):
+        from personal_assistant.server.auth import approve_user, reject_user, get_user_by_id
+        try:
+            uid = int(value_str)
+        except ValueError:
+            return
+        user = get_user_by_id(uid)
+        if not user:
+            await query.edit_message_text("User not found.")
+            return
+        if action == "user_approve":
+            approve_user(uid)
+            await query.edit_message_text(f"✅ <b>{user.username}</b> has been approved.", parse_mode="HTML")
+        else:
+            reject_user(uid)
+            await query.edit_message_text(f"❌ <b>{user.username}</b> has been rejected.", parse_mode="HTML")
+        return
+
+    # ── Job actions ─────────────────────────────────────────────────
     try:
-        job_id = int(job_id_str)
+        job_id = int(value_str)
     except ValueError:
         return
 

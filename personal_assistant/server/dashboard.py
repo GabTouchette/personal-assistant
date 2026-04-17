@@ -8,9 +8,10 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from personal_assistant.db.models import JobStatus, init_db
 from personal_assistant.db.queries import (
@@ -20,6 +21,18 @@ from personal_assistant.db.queries import (
     get_job_detail,
     update_job_notes,
     update_job_status,
+)
+from personal_assistant.server.auth import (
+    _COOKIE_NAME,
+    approve_user,
+    create_session_cookie,
+    create_user,
+    get_current_user_from_request,
+    get_pending_users,
+    get_user_by_username,
+    reject_user,
+    user_count,
+    verify_password,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,6 +66,111 @@ async def _start_telegram_bot():
 
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
+
+
+# ── Auth middleware ────────────────────────────────────────────────────────────
+
+_PUBLIC_PATHS = {"/login", "/auth/login", "/auth/register", "/favicon.ico"}
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if path in _PUBLIC_PATHS or path.startswith("/output/"):
+            return await call_next(request)
+        user = get_current_user_from_request(request)
+        if user is None:
+            if path.startswith("/api/"):
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+            return RedirectResponse("/login", status_code=302)
+        request.state.user = user
+        return await call_next(request)
+
+
+app.add_middleware(AuthMiddleware)
+
+
+# ── Auth routes ───────────────────────────────────────────────────────────────
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    # If already logged in, redirect to dashboard
+    user = get_current_user_from_request(request)
+    if user:
+        return RedirectResponse("/", status_code=302)
+    return templates.TemplateResponse(request, "login.html")
+
+
+@app.post("/auth/login")
+async def auth_login(request: Request):
+    data = await request.json()
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    if not username or not password:
+        return JSONResponse({"ok": False, "error": "Username and password required"})
+    user = get_user_by_username(username)
+    if not user or not verify_password(password, user.password_hash):
+        return JSONResponse({"ok": False, "error": "Invalid credentials"})
+    if not user.is_approved:
+        return JSONResponse({"ok": False, "error": "Your account is pending admin approval"})
+    response = JSONResponse({"ok": True})
+    response.set_cookie(_COOKIE_NAME, create_session_cookie(user.id),
+                        max_age=60*60*24*30, httponly=True, samesite="lax")
+    return response
+
+
+@app.post("/auth/register")
+async def auth_register(request: Request):
+    data = await request.json()
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    if not username or len(username) < 3:
+        return JSONResponse({"ok": False, "error": "Username must be at least 3 characters"})
+    if len(password) < 6:
+        return JSONResponse({"ok": False, "error": "Password must be at least 6 characters"})
+    existing = get_user_by_username(username)
+    if existing:
+        return JSONResponse({"ok": False, "error": "Username already taken"})
+
+    # First user ever is auto-approved + admin
+    is_first = user_count() == 0
+    user = create_user(username, password, is_approved=is_first, is_admin=is_first)
+
+    if is_first:
+        # Auto-login the first user
+        response = JSONResponse({"ok": True, "auto_approved": True})
+        response.set_cookie(_COOKIE_NAME, create_session_cookie(user.id),
+                            max_age=60*60*24*30, httponly=True, samesite="lax")
+        return response
+
+    # Notify admin via Telegram
+    try:
+        from personal_assistant.config import settings
+        if settings.telegram_bot_token and settings.telegram_chat_id:
+            from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+            bot = Bot(token=settings.telegram_bot_token)
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("✅ Approve", callback_data=f"user_approve:{user.id}"),
+                InlineKeyboardButton("❌ Reject", callback_data=f"user_reject:{user.id}"),
+            ]])
+            await bot.send_message(
+                chat_id=settings.telegram_chat_id,
+                text=f"🔔 <b>New account request</b>\n\nUsername: <code>{username}</code>\n\nApprove this user?",
+                parse_mode="HTML",
+                reply_markup=keyboard,
+            )
+    except Exception as e:
+        logger.warning("Failed to send registration notification: %s", e)
+
+    return JSONResponse({"ok": True})
+
+
+@app.get("/auth/logout")
+async def auth_logout():
+    response = RedirectResponse("/login", status_code=302)
+    response.delete_cookie(_COOKIE_NAME)
+    return response
+
 
 # Serve tailored CV PDFs
 _OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "output"

@@ -153,6 +153,17 @@ class Message(Base):
     contact = relationship("Contact", back_populates="messages")
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(128), unique=True, nullable=False, index=True)
+    password_hash = Column(String(256), nullable=False)
+    is_approved = Column(Boolean, default=False)
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Engine & session factory
 engine = create_engine(settings.database_url, echo=False)
 

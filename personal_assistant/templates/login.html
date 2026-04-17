@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Job Dashboard</title>
+<style>
+  :root { --bg:#0f1117; --bg2:#1a1d27; --bg3:#22262f; --border:#2e3345; --text:#e0e0e8; --text2:#8b90a0; --accent:#3b82f6; --green:#22c55e; --red:#ef4444; --radius:8px; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:32px; width:380px; max-width:92vw; }
+  h1 { font-size:22px; font-weight:700; margin-bottom:4px; }
+  .subtitle { font-size:13px; color:var(--text2); margin-bottom:24px; }
+  .tabs { display:flex; gap:0; margin-bottom:24px; border-bottom:1px solid var(--border); }
+  .tab { flex:1; text-align:center; padding:10px 0; font-size:13px; font-weight:600; cursor:pointer; color:var(--text2); border-bottom:2px solid transparent; transition:all .15s; }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab:hover { color:var(--text); }
+  .form-group { margin-bottom:16px; }
+  label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:.3px; }
+  input { width:100%; padding:10px 12px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:var(--radius); font-size:14px; outline:none; }
+  input:focus { border-color:var(--accent); }
+  .btn { width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius); font-size:14px; font-weight:600; cursor:pointer; }
+  .btn:hover { opacity:.9; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .msg { margin-top:12px; font-size:13px; padding:8px 12px; border-radius:var(--radius); display:none; }
+  .msg.error { display:block; background:rgba(239,68,68,.1); color:var(--red); border:1px solid rgba(239,68,68,.2); }
+  .msg.success { display:block; background:rgba(34,197,94,.1); color:var(--green); border:1px solid rgba(34,197,94,.2); }
+  .msg.info { display:block; background:rgba(59,130,246,.1); color:var(--accent); border:1px solid rgba(59,130,246,.2); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Job Dashboard</h1>
+  <p class="subtitle">Sign in or request access</p>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('login')">Login</div>
+    <div class="tab" onclick="switchTab('register')">Request Access</div>
+  </div>
+  <form id="login-form" onsubmit="return handleLogin(event)">
+    <div class="form-group"><label>Username</label><input id="l-user" required autocomplete="username"></div>
+    <div class="form-group"><label>Password</label><input id="l-pass" type="password" required autocomplete="current-password"></div>
+    <button class="btn" type="submit" id="l-btn">Sign In</button>
+    <div class="msg" id="l-msg"></div>
+  </form>
+  <form id="register-form" style="display:none" onsubmit="return handleRegister(event)">
+    <div class="form-group"><label>Choose a Username</label><input id="r-user" required autocomplete="username" minlength="3"></div>
+    <div class="form-group"><label>Choose a Password</label><input id="r-pass" type="password" required autocomplete="new-password" minlength="6"></div>
+    <div class="form-group"><label>Confirm Password</label><input id="r-pass2" type="password" required autocomplete="new-password"></div>
+    <button class="btn" type="submit" id="r-btn">Request Access</button>
+    <div class="msg" id="r-msg"></div>
+  </form>
+</div>
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', (tab==='login'?i===0:i===1)); });
+  document.getElementById('login-form').style.display = tab==='login'?'':'none';
+  document.getElementById('register-form').style.display = tab==='register'?'':'none';
+}
+async function handleLogin(e) {
+  e.preventDefault();
+  var btn=document.getElementById('l-btn'), msg=document.getElementById('l-msg');
+  btn.disabled=true; btn.textContent='Signing in...'; msg.className='msg';
+  try {
+    var r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('l-user').value,password:document.getElementById('l-pass').value})});
+    var d=await r.json();
+    if(d.ok) { window.location.href='/'; }
+    else { msg.className='msg error'; msg.textContent=d.error||'Login failed'; }
+  } catch(err) { msg.className='msg error'; msg.textContent='Connection error'; }
+  btn.disabled=false; btn.textContent='Sign In';
+  return false;
+}
+async function handleRegister(e) {
+  e.preventDefault();
+  var btn=document.getElementById('r-btn'), msg=document.getElementById('r-msg');
+  var pass=document.getElementById('r-pass').value, pass2=document.getElementById('r-pass2').value;
+  if(pass!==pass2) { msg.className='msg error'; msg.textContent='Passwords do not match'; return false; }
+  btn.disabled=true; btn.textContent='Requesting...'; msg.className='msg';
+  try {
+    var r=await fetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('r-user').value,password:pass})});
+    var d=await r.json();
+    if(d.ok) { msg.className='msg success'; msg.textContent='Access requested! An admin will review your request. You\u2019ll be able to login once approved.'; btn.style.display='none'; }
+    else { msg.className='msg error'; msg.textContent=d.error||'Registration failed'; }
+  } catch(err) { msg.className='msg error'; msg.textContent='Connection error'; }
+  btn.disabled=false; btn.textContent='Request Access';
+  return false;
+}
+</script>
+</body>
+</html>

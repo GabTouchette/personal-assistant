@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.db
+browser_data/
+output/
+.env
+test_*.py
+write_*.py
+.commit_msg

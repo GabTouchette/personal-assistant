@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
 
 from personal_assistant.config import settings
@@ -85,7 +86,7 @@ def cmd_dashboard(args):
     from personal_assistant.server.dashboard import app
 
     init_db()
-    port = getattr(args, "port", 8080) or 8080
+    port = getattr(args, "port", None) or int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
 
 
@@ -97,7 +98,7 @@ def cmd_all_services(args):
     from personal_assistant.server.telegram_handler import build_bot_app
 
     init_db()
-    port = getattr(args, "port", 8080) or 8080
+    port = getattr(args, "port", None) or int(os.environ.get("PORT", 8080))
 
     # Run dashboard in a background thread
     def run_dashboard():

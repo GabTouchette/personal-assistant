@@ -30,3 +30,6 @@ output/
 
 # Nested repo artifact
 personal-assistant/
+.commit_msg
+test_*.py
+write_template*.py
