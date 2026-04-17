@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from playwright.async_api import Page, Locator
@@ -30,10 +31,12 @@ class RawJob:
     posted_at_text: str = ""
 
 
-def _build_search_url(keywords: str, location: str, time_filter: str = "r86400") -> str:
+def _build_search_url(keywords: str, location: str, time_filter: str = "r86400",
+                      *, network_filter: bool = False) -> str:
     """Build a LinkedIn Jobs search URL.
 
     time_filter: r86400 = past 24h,  r604800 = past week
+    network_filter: if True, add f_CR (company relationship) = your connections
     """
     base = "https://www.linkedin.com/jobs/search/?"
     params = {
@@ -42,8 +45,15 @@ def _build_search_url(keywords: str, location: str, time_filter: str = "r86400")
         "f_TPR": time_filter,  # time posted
         "sortBy": "DD",  # sort by date
     }
+    if network_filter:
+        params["f_CR"] = "F"   # F = 1st-degree connections at the company
     query = "&".join(f"{k}={quote_plus(str(v))}" for k, v in params.items())
     return base + query
+
+
+def _build_company_jobs_url(company_slug: str) -> str:
+    """Build the LinkedIn company jobs page URL."""
+    return f"https://www.linkedin.com/company/{quote_plus(company_slug)}/jobs/"
 
 
 async def _find_scrollable_list(page: Page) -> Locator | None:
@@ -251,7 +261,20 @@ async def _extract_job_details(page: Page, job_id: str) -> RawJob | None:
         # Remote check
         is_remote = bool(re.search(r"\bremote\b", f"{location} {title} {description[:500]}", re.IGNORECASE))
 
-        logger.info("Extracted: %s @ %s (%s)", title[:50], company[:30], location[:30])
+        # Posted time text
+        posted_at_text = ""
+        for sel in [
+            "[class*='posted-date']",
+            "[class*='posted-time']",
+            ".jobs-unified-top-card__posted-date",
+            "span[class*='timeago']",
+            "time",
+        ]:
+            posted_at_text = await _safe_text(page.locator(sel))
+            if posted_at_text:
+                break
+
+        logger.info("Extracted: %s @ %s (%s) [%s]", title[:50], company[:30], location[:30], posted_at_text or "no date")
 
         return RawJob(
             linkedin_job_id=job_id,
@@ -263,50 +286,211 @@ async def _extract_job_details(page: Page, job_id: str) -> RawJob | None:
             job_url=job_url,
             is_easy_apply=is_easy_apply,
             is_remote=is_remote,
+            posted_at_text=posted_at_text,
         )
     except Exception as e:
         logger.warning("Failed to extract details for job %s: %s", job_id, e)
         return None
 
 
+def _load_search_prefs() -> dict:
+    """Load user preferences for search parameters."""
+    prefs_path = Path(settings.output_dir) / "user_preferences.json"
+    if prefs_path.exists():
+        try:
+            return json.load(prefs_path.open())
+        except Exception:
+            pass
+    return {}
+
+
+def _parse_posted_at(text: str) -> "datetime | None":
+    """Parse LinkedIn's relative time text (e.g. '2 weeks ago') to a datetime."""
+    from datetime import datetime, timedelta
+    if not text:
+        return None
+    text = text.lower().strip()
+    m = re.search(r"(\d+)\s*(second|minute|hour|day|week|month)", text)
+    if not m:
+        return None
+    num = int(m.group(1))
+    unit = m.group(2)
+    delta_map = {
+        "second": timedelta(seconds=num),
+        "minute": timedelta(minutes=num),
+        "hour": timedelta(hours=num),
+        "day": timedelta(days=num),
+        "week": timedelta(weeks=num),
+        "month": timedelta(days=num * 30),
+    }
+    return datetime.utcnow() - delta_map.get(unit, timedelta())
+
+
+async def _persist_raw(raw: RawJob, all_jobs: list[RawJob]) -> None:
+    """Deduplicate and persist a scraped job."""
+    posted_at = _parse_posted_at(raw.posted_at_text)
+    upsert_job(
+        linkedin_job_id=raw.linkedin_job_id,
+        title=raw.title,
+        company=raw.company,
+        location=raw.location,
+        salary_text=raw.salary_text,
+        description=raw.description,
+        job_url=raw.job_url,
+        is_easy_apply=raw.is_easy_apply,
+        is_remote=raw.is_remote,
+        posted_at=posted_at,
+    )
+    all_jobs.append(raw)
+
+
+async def _scrape_search(page: Page, keyword: str, location: str,
+                         all_jobs: list[RawJob], *, network_filter: bool = False) -> None:
+    """Run a single keyword+location search and collect results."""
+    url = _build_search_url(keyword, location, network_filter=network_filter)
+    tag = f"'{keyword}' in '{location}'"
+    if network_filter:
+        tag += " [network]"
+    logger.info("Searching: %s", tag)
+    await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+    await human_delay(3, 6)
+    await random_mouse_movement(page)
+
+    job_ids = await _extract_job_ids_from_list(page)
+    logger.info("Found %d jobs for %s", len(job_ids), tag)
+
+    for jid in job_ids:
+        raw = await _extract_job_details(page, jid)
+        if raw:
+            await _persist_raw(raw, all_jobs)
+            await random_mouse_movement(page)
+
+    await human_delay(3, 6)
+
+
+async def _scrape_company_page(page: Page, company_name: str,
+                               all_jobs: list[RawJob]) -> None:
+    """Scrape the jobs tab of a company page."""
+    # Convert human name to likely slug (lowercase, hyphenated)
+    slug = re.sub(r"[^a-z0-9]+", "-", company_name.lower()).strip("-")
+    url = _build_company_jobs_url(slug)
+    logger.info("Scraping company jobs: %s → %s", company_name, url)
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
+        await human_delay(3, 6)
+
+        # Company pages list jobs differently — try job cards + hrefs
+        job_ids: list[str] = []
+        links = await page.locator("a[href*='/jobs/view/']").all()
+        for link in links:
+            href = await link.get_attribute("href") or ""
+            match = re.search(r"/jobs/view/(\d+)", href)
+            if match and match.group(1) not in job_ids:
+                job_ids.append(match.group(1))
+
+        logger.info("Found %d jobs at %s", len(job_ids), company_name)
+
+        for jid in job_ids:
+            raw = await _extract_job_details(page, jid)
+            if raw:
+                await _persist_raw(raw, all_jobs)
+                await random_mouse_movement(page)
+
+        await human_delay(2, 5)
+    except Exception as e:
+        logger.warning("Failed to scrape company page for '%s': %s", company_name, e)
+
+
+async def _resolve_connection_company(page: Page, profile_url: str) -> str | None:
+    """Visit a LinkedIn profile and extract their current company name."""
+    try:
+        # Normalize URL
+        if not profile_url.startswith("http"):
+            profile_url = "https://www.linkedin.com/in/" + profile_url.strip("/")
+        logger.info("Visiting connection profile: %s", profile_url)
+        await page.goto(profile_url, wait_until="domcontentloaded", timeout=30_000)
+        await human_delay(3, 6)
+
+        # Extract current company from headline or experience section
+        for sel in [
+            ".pv-text-details__right-panel-item-link span",
+            "[class*='experience'] [class*='company-name']",
+            "section[id='experience'] span[class*='t-14']",
+            ".inline-show-more-text--is-collapsed",
+        ]:
+            text = await _safe_text(page.locator(sel))
+            if text and len(text) < 100:
+                logger.info("Connection company: %s → %s", profile_url, text)
+                return text
+
+        # Fallback: look for company link in top card
+        company_link = page.locator("a[href*='/company/']").first
+        if await company_link.count() > 0:
+            text = (await company_link.inner_text()).strip()
+            if text:
+                logger.info("Connection company (from link): %s → %s", profile_url, text)
+                return text
+    except Exception as e:
+        logger.warning("Failed to resolve company for %s: %s", profile_url, e)
+    return None
+
+
 async def scrape_jobs(session: LinkedInSession) -> list[RawJob]:
-    """Run the full scraping pipeline: search → list → details → DB."""
+    """Run the full scraping pipeline: search → list → details → DB.
+
+    Sources:
+    1. Keyword search — uses desired_titles from prefs (falls back to config.job_titles)
+    2. Network filter search — same keywords with LinkedIn "In Your Network" filter
+    3. Target company pages — scrape jobs tab of specific companies
+    4. Connection companies — visit connection profiles, then scrape their companies' jobs
+    """
     await session.ensure_logged_in()
     page = session.page
     all_jobs: list[RawJob] = []
 
-    for keyword in settings.job_titles:
-        for location in settings.job_locations:
-            url = _build_search_url(keyword, location)
-            logger.info("Searching: %s in %s", keyword, location)
-            await page.goto(url, wait_until="domcontentloaded", timeout=30_000)
-            await human_delay(3, 6)
-            await random_mouse_movement(page)
+    prefs = _load_search_prefs()
 
-            job_ids = await _extract_job_ids_from_list(page)
-            logger.info("Found %d jobs for '%s' in '%s'", len(job_ids), keyword, location)
+    # ── 1. Keyword search ──────────────────────────────────────────
+    # Prefer desired_titles from preferences over hardcoded config
+    search_titles = prefs.get("desired_titles") or list(settings.job_titles)
+    search_locations = list(settings.job_locations)
+    home = prefs.get("home_city") or settings.home_city
+    if home and home not in search_locations:
+        search_locations.append(home)
 
-            for jid in job_ids:
-                raw = await _extract_job_details(page, jid)
-                if raw is None:
-                    continue
+    for keyword in search_titles:
+        for location in search_locations:
+            await _scrape_search(page, keyword, location, all_jobs)
 
-                # Persist to DB (deduplicates by linkedin_job_id)
-                upsert_job(
-                    linkedin_job_id=raw.linkedin_job_id,
-                    title=raw.title,
-                    company=raw.company,
-                    location=raw.location,
-                    salary_text=raw.salary_text,
-                    description=raw.description,
-                    job_url=raw.job_url,
-                    is_easy_apply=raw.is_easy_apply,
-                    is_remote=raw.is_remote,
-                )
-                all_jobs.append(raw)
-                await random_mouse_movement(page)
+    # ── 2. Network filter search ───────────────────────────────────
+    if prefs.get("prefer_connection_companies"):
+        for keyword in search_titles:
+            for location in search_locations:
+                await _scrape_search(page, keyword, location, all_jobs,
+                                     network_filter=True)
 
-            await human_delay(3, 6)  # pause between searches
+    # ── 3. Target company pages ────────────────────────────────────
+    for company in prefs.get("target_companies", []):
+        await _scrape_company_page(page, company, all_jobs)
+
+    # ── 4. Connection companies ────────────────────────────────────
+    connection_urls = prefs.get("linkedin_connections", [])
+    resolved_companies: set[str] = set()
+    for url in connection_urls:
+        company = await _resolve_connection_company(page, url)
+        if company and company not in resolved_companies:
+            resolved_companies.add(company)
+            await _scrape_company_page(page, company, all_jobs)
+
+    # Save resolved connection companies so the scorer can apply referral boosts
+    if resolved_companies:
+        prefs_path = Path(settings.output_dir) / "user_preferences.json"
+        try:
+            current = json.loads(prefs_path.read_text()) if prefs_path.exists() else {}
+            current["_resolved_connection_companies"] = sorted(resolved_companies)
+            prefs_path.write_text(json.dumps(current, indent=2, ensure_ascii=False))
+        except Exception as e:
+            logger.warning("Could not save resolved connection companies: %s", e)
 
     logger.info("Scraping complete: %d total jobs found", len(all_jobs))
     return all_jobs

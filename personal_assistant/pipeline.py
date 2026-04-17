@@ -17,6 +17,7 @@ from personal_assistant.applicator.submit import submit_easy_apply
 from personal_assistant.cv.tailoring import tailor_and_generate
 from personal_assistant.db.models import Contact, JobStatus
 from personal_assistant.db.queries import (
+    add_contact,
     get_contacts_for_job,
     get_job_by_id,
     get_jobs_by_status,
@@ -95,7 +96,18 @@ async def run_cv_and_email_plan(job_id: int) -> None:
             logger.warning("Contact research failed: %s", e)
             contacts_data = []
 
-        # Draft a LinkedIn outreach note per contact
+        # If no contacts found, create a generic "Hiring Team" contact
+        if not contacts_data:
+            generic = add_contact(
+                job_id=job.id,
+                name="Hiring Team",
+                title=f"Hiring Team at {job.company}",
+                company=job.company,
+            )
+            contacts_data = [{"id": generic.id}]
+            logger.info("Created generic Hiring Team contact for job %d", job.id)
+
+        # Draft LinkedIn + email outreach per contact
         for cd in contacts_data:
             try:
                 db = _get_db_session()
@@ -105,6 +117,7 @@ async def run_cv_and_email_plan(job_id: int) -> None:
                 db.close()
                 if contact:
                     draft_outreach(job, contact, channel="linkedin")
+                    draft_outreach(job, contact, channel="email")
             except Exception as e:
                 logger.warning("Outreach draft failed for contact %s: %s", cd.get("id"), e)
 
@@ -122,10 +135,13 @@ async def run_cv_and_email_plan(job_id: int) -> None:
 
     # \u2500\u2500 Step 4: Gather contacts + messages for the email \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     contacts = get_contacts_for_job(job_id)
-    contacts_with_messages = [
-        (c, (get_messages_for_contact(c.id) or [None])[0])
-        for c in contacts
-    ]
+    contacts_with_messages = []
+    for c in contacts:
+        msgs = get_messages_for_contact(c.id)
+        for m in msgs:
+            contacts_with_messages.append((c, m))
+        if not msgs:
+            contacts_with_messages.append((c, None))
 
     # \u2500\u2500 Step 5: Email plan \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     job = get_job_by_id(job_id)  # final refresh
@@ -134,16 +150,18 @@ async def run_cv_and_email_plan(job_id: int) -> None:
     contacts_info = []
     outreach_messages = {}
     for c, msg in contacts_with_messages:
+        channel_label = msg.channel.capitalize() if msg and msg.channel else "LinkedIn"
         info = {
             "id": c.id,
             "name": c.name,
             "title": getattr(c, "title", ""),
             "linkedin_url": getattr(c, "linkedin_url", ""),
-            "channel": "LinkedIn",
+            "channel": channel_label,
         }
-        if msg and hasattr(msg, "content") and msg.content:
-            info["message_preview"] = msg.content[:150]
-            outreach_messages[str(c.id)] = msg.content
+        msg_key = f"{c.id}_{msg.channel}" if msg and msg.channel else str(c.id)
+        if msg and msg.body:
+            info["message_preview"] = msg.body[:150]
+            outreach_messages[msg_key] = msg.body
         contacts_info.append(info)
 
     # Send via Telegram (with CV PDF inline)

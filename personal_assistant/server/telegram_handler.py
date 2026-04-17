@@ -165,7 +165,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         update_job_status(job.id, JobStatus.APPROVED)
         record_feedback(job, approved=True)
 
-        await query.edit_message_reply_markup(reply_markup=None)
+        # Delete the original notification message
+        try:
+            await query.message.delete()
+        except Exception:
+            logger.debug("Could not delete notification message for job %d", job.id)
+
         from html import escape
         await context.bot.send_message(
             chat_id=chat_id,
@@ -186,7 +191,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif action == "skip":
         update_job_status(job.id, JobStatus.REJECTED)
         record_feedback(job, approved=False)
-        await query.edit_message_reply_markup(reply_markup=None)
+        # Delete the original notification message
+        try:
+            await query.message.delete()
+        except Exception:
+            logger.debug("Could not delete notification message for job %d", job.id)
         await context.bot.send_message(
             chat_id=chat_id,
             text=f"\u274c <b>Job #{job.id} skipped.</b>",
@@ -281,10 +290,20 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
 
     elif action == "done":
-        await query.edit_message_reply_markup(reply_markup=None)
+        update_job_status(job.id, JobStatus.APPLIED)
+
+        # Delete all plan messages for this job
+        from personal_assistant.notifier.telegram import _plan_message_ids
+        plan_ids = _plan_message_ids.pop(job.id, [])
+        for mid in plan_ids:
+            try:
+                await context.bot.delete_message(chat_id=chat_id, message_id=mid)
+            except Exception:
+                logger.debug("Could not delete plan message %d for job %d", mid, job.id)
+
         await context.bot.send_message(
             chat_id=chat_id,
-            text=f"\u2705 <b>Job #{job.id} marked as done.</b> Good luck!",
+            text=f"\u2705 <b>Job #{job.id} marked as applied!</b> Good luck!",
             parse_mode=HTML,
         )
 

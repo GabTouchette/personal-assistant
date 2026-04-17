@@ -6,6 +6,10 @@ Two parts:
 
 Weights are persisted in output/scoring_weights.json so they survive restarts
 and are human-readable / editable.
+
+User preferences (output/user_preferences.json) inject additional keywords
+from technologies, domains, desired job titles, and deal-breakers so the
+scorer works for any profession — not just software developers.
 """
 
 import json
@@ -19,106 +23,147 @@ from personal_assistant.db.models import Job
 logger = logging.getLogger(__name__)
 
 WEIGHTS_PATH = Path(settings.output_dir) / "scoring_weights.json"
+PREFS_PATH = Path(settings.output_dir) / "user_preferences.json"
 
 # ── Default weight tables ─────────────────────────────────────────────────────
-# Each match adds the weight to the raw score. Negative = penalty.
+# These are the base/fallback keywords. User preferences add more at runtime.
 
 _DEFAULT_WEIGHTS = {
     # === Positive signals ===
-    "frameworks": {
-        "flutter": 18,
-        "django": 14,
-        "vue": 12, "vuejs": 12, "vue.js": 12,
-        "react": 10,
-        "angular": 8,
-        "fastapi": 14,
-        "node": 6, "nodejs": 6, "node.js": 6,
-        "next.js": 6, "nextjs": 6,
-        "express": 5,
-    },
-    "languages": {
-        "python": 12,
-        "typescript": 10,
-        "javascript": 6,
-        "dart": 15,  # Flutter = Dart
-        "html": 2,
-        "css": 2,
-    },
-    "infra": {
-        "docker": 5,
-        "kubernetes": 6, "k8s": 6,
-        "azure": 6,
-        "terraform": 5,
-        "argocd": 5,
-        "ci/cd": 3, "ci cd": 3,
-        "aws": 4,
-        "gcp": 3,
-    },
-    "domain": {
-        "healthcare": 20,
-        "health tech": 20, "healthtech": 20,
-        "medical": 20,
-        "medtech": 20,
-        "fhir": 18,
-        "pacs": 18,
-        "hipaa": 12,
-        "ophthalmology": 25,
-        "telemedicine": 15, "telehealth": 15,
-        "biotech": 12,
-        "pharmaceutical": 8,
-    },
+    "skills": {},         # populated from user prefs "technologies"
+    "domain": {},         # populated from user prefs "domains"
+    "job_titles": {},     # populated from user prefs "desired_titles"
     "seniority": {
-        "lead": 10,
-        "senior": 8,
-        "staff": 8,
-        "principal": 6,
-        "architect": 5,
-        "manager": 3,
+        "junior": 10,
+        "intermediate": 8, "mid-level": 8,
+        "new grad": 6, "entry level": 6, "entry-level": 6,
+        "1-3 years": 5, "2+ years": 5, "1+ years": 5,
     },
     "location": {
         "remote": 8,
         "hybrid": 4,
-        "montreal": 6, "montréal": 6,
-        "canada": 4,
     },
     # === Negative signals (penalty) ===
     "penalties": {
-        "10+ years": -15, "10 years": -10,
-        "15+ years": -25, "15 years": -20,
-        "phd required": -20, "ph.d. required": -20,
-        "clearance required": -15, "security clearance": -15,
-        "c# only": -12, ".net only": -12,
-        "salesforce": -10,
-        "sap ": -10,
-        "cobol": -15,
-        "mainframe": -15,
+        # Seniority mismatch (dynamically adjusted from max_experience_years)
+        "senior": -12,
+        "staff": -15,
+        "principal": -20,
+        "architect": -10,
+        "director": -25,
+        "vp ": -25,
     },
+    "deal_breakers": {},  # populated from user prefs "deal_breakers"
     # === Learned adjustments (populated by feedback) ===
-    "learned_boosts": {},      # keyword -> int  (from YES decisions)
-    "learned_penalties": {},    # keyword -> int  (from NO decisions)
-    "blocked_companies": [],    # companies rejected 3+ times → auto-reject
-    "company_reject_count": {}, # company -> count of rejections
+    "learned_boosts": {},
+    "learned_penalties": {},
+    "blocked_companies": [],
+    "company_reject_count": {},
 }
+
+# Default keyword weight when injected from user preferences
+_USER_SKILL_WEIGHT = 10
+_USER_DOMAIN_WEIGHT = 15
+_USER_TITLE_WEIGHT = 12
+_USER_DEAL_BREAKER_PENALTY = -20
+
+
+def _load_prefs() -> dict:
+    """Load user preferences from disk."""
+    if PREFS_PATH.exists():
+        try:
+            return json.loads(PREFS_PATH.read_text())
+        except Exception:
+            pass
+    return {}
 
 
 def _load_weights() -> dict:
-    """Load weights from disk, or return defaults."""
+    """Load weights from disk, merge with defaults, then inject user preferences."""
     if WEIGHTS_PATH.exists():
         try:
             with open(WEIGHTS_PATH) as f:
                 saved = json.load(f)
             # Merge with defaults so new categories are picked up
-            merged = {**_DEFAULT_WEIGHTS}
+            merged = json.loads(json.dumps(_DEFAULT_WEIGHTS))
             for key in merged:
                 if key in saved:
                     if isinstance(merged[key], dict) and isinstance(saved[key], dict):
                         merged[key] = {**merged[key], **saved[key]}
                     else:
                         merged[key] = saved[key]
-            return merged
         except Exception as e:
             logger.warning("Failed to load scoring weights: %s — using defaults", e)
-    return json.loads(json.dumps(_DEFAULT_WEIGHTS))  # deep copy
+            merged = json.loads(json.dumps(_DEFAULT_WEIGHTS))
+    else:
+        merged = json.loads(json.dumps(_DEFAULT_WEIGHTS))
+
+    # Inject user-defined keywords from preferences
+    prefs = _load_prefs()
+    radar = prefs.get("weights", {})
+
+    # Skills from preferences → "skills" category
+    for tech in prefs.get("technologies", []):
+        kw = tech.lower().strip()
+        if kw and kw not in merged["skills"]:
+            base = _USER_SKILL_WEIGHT
+            factor = radar.get("skills_match", 50) / 50
+            merged["skills"][kw] = max(1, int(base * factor))
+
+    # Domains from preferences → "domain" category
+    for dom in prefs.get("domains", []):
+        kw = dom.lower().strip()
+        if kw and kw not in merged["domain"]:
+            base = _USER_DOMAIN_WEIGHT
+            factor = radar.get("industry_match", 50) / 50
+            merged["domain"][kw] = max(1, int(base * factor))
+
+    # Desired job titles → "job_titles" category
+    for title in prefs.get("desired_titles", []):
+        kw = title.lower().strip()
+        if kw and kw not in merged["job_titles"]:
+            base = _USER_TITLE_WEIGHT
+            merged["job_titles"][kw] = base
+
+    # Home city → "location" category
+    home = prefs.get("home_city", settings.home_city).lower().strip()
+    if home:
+        merged["location"][home] = merged["location"].get(home, 6)
+        # Accent variant
+        _ACCENT_MAP = {"montreal": "montréal", "montréal": "montreal"}
+        if home in _ACCENT_MAP:
+            merged["location"][_ACCENT_MAP[home]] = merged["location"].get(_ACCENT_MAP[home], 6)
+
+    # Deal-breaker keywords → "deal_breakers" category
+    for db_kw in prefs.get("deal_breakers", []):
+        kw = db_kw.lower().strip()
+        if kw and kw not in merged["deal_breakers"]:
+            merged["deal_breakers"][kw] = _USER_DEAL_BREAKER_PENALTY
+
+    # Experience penalties — dynamically build from max_experience_years
+    max_yrs = int(prefs.get("max_experience_years", settings.max_experience_years))
+    _exp_tiers = [
+        (3, -5), (5, -10), (7, -15), (8, -18), (10, -25), (15, -35),
+    ]
+    for yrs, penalty in _exp_tiers:
+        if yrs > max_yrs:
+            for pattern in [f"{yrs}+ years", f"{yrs} years of experience", f"{yrs} years"]:
+                merged["penalties"][pattern] = penalty
+
+    # Apply radar multipliers to base categories
+    _category_to_radar = {
+        "skills": "skills_match",
+        "domain": "industry_match",
+        "seniority": "seniority_fit",
+        "location": "location_fit",
+    }
+    for cat, radar_key in _category_to_radar.items():
+        factor = radar.get(radar_key, 50) / 50
+        if cat in merged and isinstance(merged[cat], dict):
+            for kw in merged[cat]:
+                merged[cat][kw] = max(1, int(abs(merged[cat][kw]) * factor)) if merged[cat][kw] > 0 else merged[cat][kw]
+
+    return merged
 
 
 def _save_weights(weights: dict) -> None:
@@ -133,7 +178,22 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower().strip())
 
 
+def _keyword_in_text(keyword: str, text: str) -> bool:
+    """Check if keyword appears in text using word boundaries where possible.
+
+    Multi-word phrases and keywords with special chars (/, +, .) use substring match.
+    Single "normal" words use \\b word boundaries to avoid false positives
+    (e.g. "css" won't match "accessing").
+    """
+    if any(c in keyword for c in "/.+#") or " " in keyword:
+        # Multi-word or special-char keywords: substring match is safer
+        return keyword in text
+    return bool(re.search(r"\b" + re.escape(keyword) + r"\b", text))
+
+
 # ── Scoring ───────────────────────────────────────────────────────────────────
+
+_POSITIVE_CATEGORIES = ("skills", "domain", "job_titles", "seniority", "location")
 
 def score_job(job: Job) -> dict:
     """Score a job using keyword weights. Returns dict with score + breakdown.
@@ -152,7 +212,7 @@ def score_job(job: Job) -> dict:
         job.title or "",
         job.company or "",
         job.location or "",
-        (job.description or "")[:3000],
+        (job.description or "")[:4000],
     ]))
 
     # Check blocked companies
@@ -168,29 +228,125 @@ def score_job(job: Job) -> dict:
     raw = 0
 
     # Positive categories
-    for category in ("frameworks", "languages", "infra", "domain", "seniority", "location"):
+    for category in _POSITIVE_CATEGORIES:
         for keyword, weight in weights.get(category, {}).items():
-            if keyword in text:
+            if _keyword_in_text(keyword, text):
                 breakdown[keyword] = weight
                 raw += weight
 
     # Penalties
     for keyword, penalty in weights.get("penalties", {}).items():
-        if keyword in text:
+        if _keyword_in_text(keyword, text):
             breakdown[keyword] = penalty
+            raw += penalty
+
+    # Deal-breakers (user-defined negative keywords)
+    for keyword, penalty in weights.get("deal_breakers", {}).items():
+        if _keyword_in_text(keyword, text):
+            breakdown[f"deal_breaker:{keyword}"] = penalty
             raw += penalty
 
     # Learned boosts
     for keyword, boost in weights.get("learned_boosts", {}).items():
-        if keyword in text:
+        if _keyword_in_text(keyword, text):
             breakdown[f"learned:{keyword}"] = boost
             raw += boost
 
     # Learned penalties
     for keyword, penalty in weights.get("learned_penalties", {}).items():
-        if keyword in text:
+        if _keyword_in_text(keyword, text):
             breakdown[f"learned:{keyword}"] = penalty
             raw += penalty
+
+    # ── Salary penalty ────────────────────────────────────────────────────
+    prefs = _load_prefs()
+    min_salary = prefs.get("salary", settings.min_salary)
+    radar = prefs.get("weights", {})
+    salary_importance = radar.get("compensation", 50) / 100  # 0.0-1.0
+
+    if min_salary and salary_importance > 0:
+        # Extract salary numbers from job text
+        salary_matches = re.findall(r"\$\s*([\d,]+)", text)
+        if salary_matches:
+            max_posted = max(int(s.replace(",", "")) for s in salary_matches)
+            if max_posted < min_salary:
+                penalty = int(-15 * salary_importance)
+                breakdown["below_min_salary"] = penalty
+                raw += penalty
+
+    # ── Work style penalty ────────────────────────────────────────────────
+    work_pref = prefs.get("work_mode", "any")
+    work_importance = radar.get("work_style", 50) / 100
+
+    if work_pref != "any" and work_importance > 0:
+        loc_lower = _normalize(job.location or "")
+        desc_start = _normalize((job.description or "")[:500])
+        combined = loc_lower + " " + desc_start
+
+        if work_pref == "remote" and "remote" not in combined:
+            penalty = int(-10 * work_importance)
+            breakdown["not_remote"] = penalty
+            raw += penalty
+        elif work_pref == "onsite" and "remote" in combined and "hybrid" not in combined:
+            penalty = int(-5 * work_importance)
+            breakdown["only_remote"] = penalty
+            raw += penalty
+
+    # ── Location penalty: non-local + non-remote → heavy penalty ──────────
+    home_city = prefs.get("home_city", settings.home_city).lower().strip()
+    _home_cities = {home_city}
+    _ACCENT_MAP = {"montreal": "montréal", "montréal": "montreal"}
+    if home_city in _ACCENT_MAP:
+        _home_cities.add(_ACCENT_MAP[home_city])
+
+    loc_lower = _normalize(job.location or "")
+    title_lower = _normalize(job.title or "")
+    desc_start = _normalize((job.description or "")[:500])
+    is_remote = (
+        "remote" in loc_lower
+        or "remote" in title_lower
+        or "remote" in desc_start
+        or getattr(job, "is_remote", False)
+    )
+    _broad_regions = ["amérique du nord", "north america", "worldwide", "anywhere", "canada"]
+    is_broad_region = any(region in loc_lower for region in _broad_regions)
+    is_local = any(city in loc_lower for city in _home_cities)
+
+    location_importance = radar.get("location_fit", 65) / 100
+    if not is_remote and not is_broad_region and not is_local and loc_lower:
+        penalty = int(-30 * location_importance)
+        breakdown["non_local_onsite"] = penalty
+        raw += penalty
+
+    # ── Referral / connection boost ───────────────────────────────────────
+    target_companies = [c.lower().strip() for c in prefs.get("target_companies", [])]
+    connection_companies = [c.lower().strip() for c in prefs.get("_resolved_connection_companies", [])]
+    all_referral_companies = set(target_companies + connection_companies)
+
+    if company_lower and all_referral_companies:
+        for ref_company in all_referral_companies:
+            if ref_company and (ref_company in company_lower or company_lower in ref_company):
+                boost = 20
+                breakdown["referral_company"] = boost
+                raw += boost
+                break
+
+    # ── Staleness penalty ─────────────────────────────────────────────────
+    from datetime import datetime, timedelta
+    posted_at = getattr(job, "posted_at", None)
+    if posted_at:
+        try:
+            age_days = (datetime.utcnow() - posted_at).days
+            if age_days > 21:
+                penalty = -15
+                breakdown["stale_listing"] = penalty
+                raw += penalty
+            elif age_days > 14:
+                penalty = -8
+                breakdown["stale_listing"] = penalty
+                raw += penalty
+        except Exception:
+            pass
 
     clamped = max(0, min(100, raw))
 
@@ -235,9 +391,9 @@ def record_feedback(job: Job, approved: bool) -> None:
 
     # Extract which known keywords are in this job
     all_keywords = set()
-    for cat in ("frameworks", "languages", "infra", "domain", "seniority"):
+    for cat in _POSITIVE_CATEGORIES:
         for kw in weights.get(cat, {}):
-            if kw in text:
+            if _keyword_in_text(kw, text):
                 all_keywords.add(kw)
 
     learned_boosts = weights.setdefault("learned_boosts", {})

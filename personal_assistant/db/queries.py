@@ -241,3 +241,24 @@ def update_job_notes(job_id: int, notes: str) -> None:
             session.commit()
     finally:
         session.close()
+
+
+def delete_job(job_id: int) -> bool:
+    """Permanently delete a job and its related contacts/messages."""
+    session = get_session()
+    try:
+        job = session.get(Job, job_id)
+        if not job:
+            return False
+        # Delete related contacts and messages
+        contacts = session.scalars(select(Contact).where(Contact.job_id == job_id)).all()
+        for contact in contacts:
+            messages = session.scalars(select(Message).where(Message.contact_id == contact.id)).all()
+            for msg in messages:
+                session.delete(msg)
+            session.delete(contact)
+        session.delete(job)
+        session.commit()
+        return True
+    finally:
+        session.close()

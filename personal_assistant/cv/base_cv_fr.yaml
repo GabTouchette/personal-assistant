@@ -34,22 +34,46 @@ experience:
     location: ""
     dates: "2022 – 2024"
     bullets:
-      - "Développé des outils internes et des applications destinées aux clients avec Vue.js et Django"
-      - "Créé des systèmes de gestion d'inventaire pour des plateformes de concessionnaires"
-      - "Collaboré avec des équipes pluridisciplinaires pour livrer des solutions web évolutives"
+      - "Développé des outils internes et des applications destinées aux clients avec Vue.js et Django pour une entreprise spécialisée dans les sites web pour concessionnaires de véhicules récréatifs"
+      - "Créé des solutions de gestion d’inventaire pour les plateformes de concessionnaires, contribuant au bon fonctionnement des boutiques en ligne"
+      - "Collaboré avec des équipes pluridisciplinaires (équipe de développement, graphistes, finance) pour livrer des solutions web évolutives"
 
   - title: "Développeur Web (Stagiaire)"
     company: "Sports AI"
     location: ""
-    dates: "2022 – 2022"
+    dates: "Été 2022"
     bullets:
-      - "Développé une application web React de A à Z dans des délais serrés"
-      - "Livré une application prête pour la production lors du lancement de l'entreprise"
+      - "Développé une application web React.js de A à Z lors d’un stage de 4 mois"
+      - "Respect des délais serrés pour livrer l’application avant le lancement officiel, présenté en direct devant un large public"
+      - "Prospection dans un environnement rapide et sous pression, démonstration d’adaptabilité pour livrer un produit de qualité"
+
+  - title: "Développeur Web (Stagiaire)"
+    company: "CellCarta (anciennement Caprion-Histogenex)"
+    location: ""
+    dates: "2021"
+    bullets:
+      - "Création d’un site interne permettant aux nouveaux employés de créer un logo personnalisé apparaissant sur du matériel promotionnel"
+      - "Interface facile à utiliser pour accéder aux informations des employés et gérer les données des nouvelles recrues lors d’acquisitions"
+
+  - title: "Développeur Web (Stagiaire)"
+    company: "Magnus Chemicals Ltd."
+    location: ""
+    dates: "2021"
+    bullets:
+      - "Développement d’un site interactif pour attirer davantage de clients et minimiser les interactions avec le service client"
+      - "Collaboration avec des développeurs, graphistes et spécialistes en finance et marketing pour produire un produit agréable et facile à utiliser"
 
 education:
   - degree: "B.Ing. Génie logiciel"
     institution: "Polytechnique Montréal"
     dates: "2020 – 2025"
+    details:
+      - "GPA :3.33/4"
+      - "Échange étudiant à l’Université de technologie du Queensland (QUT), Brisbane, Australie — sélectionné parmi 4 étudiants d’un groupe compétitif pour un programme de 6 mois"
+
+  - degree: "DEC en informatique et mathématiques"
+    institution: "Collège Champlain"
+    dates: "2020 – 2021"
     details: []
 
 projects:
@@ -63,20 +87,43 @@ projects:
       - "Fil social avec algorithme de classement et défilement infini (système «Pour toi»)"
       - "Planification de repas, estimation des calories et automatisation des listes d'épicerie en cours"
       - "Déployé sur TestFlight et Heroku"
+  - name: "Jeu multijoueur Spot-the-Difference"
+    url: ""
+    dates: "2023"
+    bullets:
+      - "Développement d’un jeu multijoueur où les joueurs trouvent les différences entre deux images"
+      - "Construit avec Angular, Electron, MongoDB, Node.js, Flutter et Dart"
+      - "Équipe de 6 — responsable de la planification, la coordination et la livraison de chaque module dans les délais"
 
+  - name: "Jeu de Scrabble en ligne"
+    url: ""
+    dates: "2022"
+    bullets:
+      - "Création d’un Scrabble en ligne où l’utilisateur joue contre un autre joueur ou un joueur virtuel avec plusieurs niveaux de difficulté"
+      - "Utilisé Angular, MongoDB, Node.js, Express et Socket.io pour la communication client-serveur en temps réel"
+      - "Coordination au sein d’une équipe de 6, nécessitant organisation et planification rigoureuses"
+
+  - name: "Robot autonome anti-obstacles"
+    url: ""
+    dates: "2021"
+    bullets:
+      - "Construction d’un mini-robot autonome équipé de capteurs de distance pour éviter les obstacles"
+      - "Conception d’un algorithme traitant les données des capteurs pour déterminer la meilleure manœuvre d’évitement"
 skills:
   - category: "Langages"
-    technologies: ["Python", "TypeScript", "JavaScript", "Java", "C++", "HTML", "CSS"]
+    technologies: ["Python", "TypeScript", "JavaScript", "Java", "C++", "HTML", "CSS", "SCSS"]
   - category: "Cadres et bibliothèques"
-    technologies: ["Flutter", "React", "Vue.js", "Angular", "Django", "Node.js", "FastAPI"]
+    technologies: ["Flutter", "React", "Vue.js", "Angular", "Django", "Node.js", "FastAPI", "Express", "Socket.io"]
   - category: "Bases de données"
-    technologies: ["PostgreSQL", "SQLite", "Redis"]
+    technologies: ["PostgreSQL", "SQLite", "MongoDB", "Redis"]
   - category: "Infonuagique et DevOps"
-    technologies: ["Azure", "Docker", "Kubernetes (AKS)", "Terraform", "ArgoCD", "Pipelines CI/CD"]
+    technologies: ["Azure", "Docker", "Kubernetes (AKS)", "Terraform", "ArgoCD", "Pipelines CI/CD", "Heroku"]
   - category: "Pratiques"
-    technologies: ["Architecture système", "API REST", "Systèmes distribués", "Microservices", "Agile / Scrum", "Révision de code"]
+    technologies: ["Architecture système", "API REST", "Systèmes distribués", "Microservices", "Agile / Scrum", "Révision de code", "WebSockets"]
   - category: "Expertise Métier"
     technologies: ["Systèmes de santé", "Imagerie médicale (FHIR / PACS)", "Conformité HIPAA / RGPD / PIPEDA"]
+  - category: "Outils"
+    technologies: ["Git", "GitHub", "GitLab", "BitBucket", "Jira", "YouTrack", "Electron"]
   - category: "Langues"
     technologies: ["Français (langue maternelle)", "Anglais (courant)"]
 

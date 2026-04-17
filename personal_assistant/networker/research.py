@@ -60,26 +60,65 @@ async def find_company_contacts(
         url = f"https://www.linkedin.com/search/results/people/?keywords={query.replace(' ', '%20')}"
         await page.goto(url, wait_until="domcontentloaded")
         await human_delay(2, 4)
-        await random_mouse_movement(page)
 
-        # Extract people cards
+        # Wait for search results to render
+        try:
+            await page.wait_for_selector(
+                ".reusable-search__result-container, .search-results-container",
+                timeout=8000,
+            )
+        except Exception:
+            logger.debug("Search results didn't load for query: %s", query)
+            continue
+
+        await random_mouse_movement(page)
+        await human_scroll(page)
+        await human_delay(1, 2)
+
+        # Extract people cards (try multiple selector patterns)
         cards = await page.locator(".reusable-search__result-container").all()
+        if not cards:
+            cards = await page.locator("li.reusable-search__result-container").all()
 
         for card in cards[:3]:
             if len(contacts) >= max_results:
                 break
 
             try:
-                name_el = card.locator(".entity-result__title-text a span[aria-hidden='true']").first
-                name = (await name_el.inner_text()).strip() if await name_el.count() else ""
+                # Try multiple selectors for name (LinkedIn changes DOM frequently)
+                name = ""
+                for sel in [
+                    ".entity-result__title-text a span[aria-hidden='true']",
+                    ".entity-result__title-text span[dir='ltr'] span[aria-hidden='true']",
+                    "span.entity-result__title-text a",
+                    ".app-aware-link span[aria-hidden='true']",
+                ]:
+                    el = card.locator(sel).first
+                    if await el.count():
+                        name = (await el.inner_text()).strip()
+                        if name and name != "LinkedIn Member":
+                            break
 
-                title_el = card.locator(".entity-result__primary-subtitle").first
-                person_title = (await title_el.inner_text()).strip() if await title_el.count() else ""
+                # Try multiple selectors for title/subtitle
+                person_title = ""
+                for sel in [
+                    ".entity-result__primary-subtitle",
+                    ".entity-result__summary",
+                    "div.t-14.t-black.t-normal",
+                ]:
+                    el = card.locator(sel).first
+                    if await el.count():
+                        person_title = (await el.inner_text()).strip()
+                        if person_title:
+                            break
 
-                link_el = card.locator(".entity-result__title-text a").first
+                link_el = card.locator("a.app-aware-link").first
+                if not await link_el.count():
+                    link_el = card.locator(".entity-result__title-text a").first
                 profile_url = await link_el.get_attribute("href") if await link_el.count() else ""
 
-                if not name:
+                if not name or name == "LinkedIn Member":
+                    logger.debug("Skipping card with no name (title: %s)", person_title)
                     continue
 
                 role = _classify_role(person_title)

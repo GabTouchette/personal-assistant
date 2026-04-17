@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 HTML = ParseMode.HTML
 
+# In-memory store: job_id → list of Telegram message_ids for the apply plan
+_plan_message_ids: dict[int, list[int]] = {}
+
 
 def _bot() -> Bot:
     return Bot(token=settings.telegram_bot_token)
@@ -41,21 +44,22 @@ async def send_message(text: str, parse_mode: str | None = HTML) -> None:
     )
 
 
-async def send_document(file_path: str, caption: str = "") -> None:
-    """Send a file (e.g. PDF) to the configured chat."""
+async def send_document(file_path: str, caption: str = "") -> int | None:
+    """Send a file (e.g. PDF) to the configured chat. Returns message_id."""
     bot = _bot()
     path = Path(file_path)
     if not path.exists():
         logger.error("File not found: %s", file_path)
-        return
+        return None
     with open(path, "rb") as f:
-        await bot.send_document(
+        m = await bot.send_document(
             chat_id=settings.telegram_chat_id,
             document=f,
             filename=path.name,
             caption=caption[:1024] if caption else None,
             parse_mode=HTML,
         )
+        return m.message_id
 
 
 # ── Job notification ──────────────────────────────────────────────────────────
@@ -116,15 +120,12 @@ def _format_job_message(job: Job) -> str:
     return "\n".join(parts)
 
 
-def _job_keyboard(job_id: int) -> InlineKeyboardMarkup:
-    """Inline buttons: Apply / Skip / Ask."""
+def _job_keyboard(job: Job) -> InlineKeyboardMarkup:
+    """Inline buttons: Interested / Skip."""
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("\u2705 Apply", callback_data=f"apply:{job_id}"),
-            InlineKeyboardButton("\u274c Skip", callback_data=f"skip:{job_id}"),
-        ],
-        [
-            InlineKeyboardButton("\u2753 Ask a question", callback_data=f"ask:{job_id}"),
+            InlineKeyboardButton("\u2705 Interested", callback_data=f"apply:{job.id}"),
+            InlineKeyboardButton("\u274c Skip", callback_data=f"skip:{job.id}"),
         ],
     ])
 
@@ -133,7 +134,7 @@ async def send_job_notification(job: Job) -> bool:
     """Send a Telegram message with job details + inline buttons."""
     bot = _bot()
     text = _format_job_message(job)
-    keyboard = _job_keyboard(job.id)
+    keyboard = _job_keyboard(job)
 
     try:
         await bot.send_message(
@@ -173,6 +174,7 @@ async def send_apply_plan(
     """Send the full apply plan with CV, outreach messages, and action buttons."""
     bot = _bot()
     chat_id = settings.telegram_chat_id
+    sent_ids: list[int] = []
 
     # ── 1. Header + how to apply ──────────────────────────────────────────────
     parts = [
@@ -194,14 +196,17 @@ async def send_apply_plan(
         apply_channels.append("linkedin")
 
     parts.append("")
-    await bot.send_message(chat_id=chat_id, text="\n".join(parts), parse_mode=HTML)
+    m = await bot.send_message(chat_id=chat_id, text="\n".join(parts), parse_mode=HTML)
+    sent_ids.append(m.message_id)
 
     # ── 2. CV + changes summary ───────────────────────────────────────────────
     if pdf_path:
         caption = f"Tailored CV for <b>{_e(job.title)}</b> @ {_e(job.company)}"
         if cv_changes_summary:
             caption += f"\n\n<i>{_e(cv_changes_summary)}</i>"
-        await send_document(pdf_path, caption=caption[:1024])
+        doc_id = await send_document(pdf_path, caption=caption[:1024])
+        if doc_id:
+            sent_ids.append(doc_id)
 
     # ── 3. Outreach messages (each in a collapsible blockquote) ───────────────
     if contacts_info:
@@ -219,17 +224,20 @@ async def send_apply_plan(
             msg_parts.append(f"\u2022 Channel: <b>{channel}</b>")
 
             # Show drafted message in expandable blockquote
-            msg_key = str(c.get("id", i))
-            drafted = outreach_messages.get(msg_key, c.get("message_preview", ""))
+            cid = str(c.get("id", i))
+            ch = c.get("channel", "LinkedIn").lower()
+            msg_key = f"{cid}_{ch}"
+            drafted = outreach_messages.get(msg_key, outreach_messages.get(cid, c.get("message_preview", "")))
             if drafted:
                 msg_parts.append("")
                 msg_parts.append(f"<blockquote expandable>{_e(drafted)}</blockquote>")
 
-            await bot.send_message(
+            cm = await bot.send_message(
                 chat_id=chat_id,
                 text="\n".join(msg_parts),
                 parse_mode=HTML,
             )
+            sent_ids.append(cm.message_id)
 
     # ── 4. Action buttons ─────────────────────────────────────────────────────
     buttons = []
@@ -260,19 +268,22 @@ async def send_apply_plan(
             ),
         ])
 
-    # Tweak / Ask buttons
+    # Tweak / Done buttons
     buttons.append([
         InlineKeyboardButton("\u270f\ufe0f Tweak CV", callback_data=f"tweakcv:{job.id}"),
         InlineKeyboardButton("\u270f\ufe0f Tweak Messages", callback_data=f"tweakmsg:{job.id}"),
     ])
     buttons.append([
-        InlineKeyboardButton("\u2753 Ask a Question", callback_data=f"ask:{job.id}"),
-        InlineKeyboardButton("\u2705 Done", callback_data=f"done:{job.id}"),
+        InlineKeyboardButton("\u2705 Applied", callback_data=f"done:{job.id}"),
     ])
 
-    await bot.send_message(
+    am = await bot.send_message(
         chat_id=chat_id,
         text="<b>What would you like to do?</b>",
         parse_mode=HTML,
         reply_markup=InlineKeyboardMarkup(buttons),
     )
+    sent_ids.append(am.message_id)
+
+    # Store message IDs so they can be deleted when user presses "Applied"
+    _plan_message_ids[job.id] = sent_ids

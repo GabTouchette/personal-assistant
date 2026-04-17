@@ -59,16 +59,23 @@ _TAILOR_PROMPT_EN = """\
 You are an expert resume writer. Tailor the base CV (YAML) to maximize relevance for the target job.
 
 Rules:
-1. Keep ALL facts truthful — never invent experience, companies, or skills.
-2. Focus PRIMARILY on the Skills section — reorder categories and add relevant skills the candidate plausibly has.
-3. Tailor experience bullets to match the job description: reword to highlight relevant skills and technologies, reorder so the most relevant bullets appear first, and REMOVE bullets that are irrelevant to this role.
-4. Do NOT make the CV longer than the original. Cut content the company doesn't care about and add or modify bullets that highlight relevant experience.
-5. You may add up to 2 skill items if the candidate plausibly has them from context.
-6. NEVER use the word "Engineer" or "Ingénieur" in any job title — use "Developer",
+1. STRICT HONESTY — never invent, add, or imply experience, companies, technologies, or skills that
+   are not already present in the base CV. Only rearrange, remove, or reword existing content.
+2. Focus PRIMARILY on the Skills section — reorder categories and surface relevant skills the
+   candidate already has. Do NOT add new skill items unless they appear in the base CV.
+3. Tailor experience bullets: reword to highlight relevant technologies and responsibilities,
+   reorder so the most relevant bullets come first, and REMOVE bullets irrelevant to this role.
+4. Do NOT make the CV longer than the original. Cut content the company doesn't care about.
+5. NEVER use the word "Engineer" or "Ingénieur" in any job title — use "Developer",
    "Technologist", or "Lead Developer" instead. This is a legal requirement in Quebec.
-7. Do NOT write a professional_summary — leave it empty ("").
-8. Add a top-level field `modification_note` containing ONE sentence describing the key changes you made (e.g. "Emphasized cloud infrastructure and Kubernetes experience, removed healthcare-specific bullets").
-9. Output structure must be identical to the input YAML (plus the `modification_note` field).
+6. Do NOT write a professional_summary — leave it empty ("").
+7. Add a top-level field `modification_note` with:
+   a) ONE sentence describing the key changes made.
+   b) If the job description values technologies or skills NOT in the base CV that would be
+      genuinely useful to add, list them as suggestions in parentheses, e.g.:
+      "Emphasized cloud experience. Suggestion: Knowledge of AWS and Redis Streams is valued
+      in this role — would you like to add them?"
+8. Output structure must be identical to the input YAML (plus the `modification_note` field).
 
 Base CV:
 ```yaml
@@ -89,16 +96,26 @@ Tu es un expert en rédaction de CV. Adapte le CV de base (YAML) pour maximiser 
 par rapport au poste cible.
 
 Règles :
-1. Toutes les informations doivent être vraies — n'invente jamais d'expérience ou de compétences.
-2. Concentre-toi PRINCIPALEMENT sur la section Compétences — réordonne les catégories et ajoute les compétences pertinentes que le candidat possède vraisemblablement.
-3. Adapte les points d'expérience au poste : reformule pour mettre en valeur les compétences pertinentes, réordonne pour que les plus pertinents soient en premier, et SUPPRIME les points non pertinents.
-4. Ne rends PAS le CV plus long que l'original. Retire le contenu que l'entreprise ne recherche pas et ajoute ou modifie les points qui mettent en valeur l'expérience pertinente.
-5. Tu peux ajouter jusqu'à 2 compétences si le candidat les possède vraisemblablement.
-6. N'utilise JAMAIS le mot «Ingénieur» dans un titre de poste — utilise «Développeur»,
+1. HONNÊTETÉ STRICTE — n'invente, n'ajoute ou n'implique jamais d'expériences, d'entreprises,
+   de technologies ou de compétences qui ne sont pas déjà présentes dans le CV de base.
+   Réordonne, supprime ou reformule uniquement le contenu existant.
+2. Concentre-toi PRINCIPALEMENT sur la section Compétences — réordonne les catégories et
+   mets en avant les compétences que le candidat possède déjà. N'ajoute PAS de nouvelles
+   compétences sauf si elles figurent dans le CV de base.
+3. Adapte les points d'expérience : reformule pour mettre en valeur les technologies et
+   responsabilités pertinentes, réordonne pour que les plus pertinents soient en premier,
+   et SUPPRIME les points non pertinents pour ce poste.
+4. Ne rends PAS le CV plus long que l'original. Retire le contenu non pertinent.
+5. N'utilise JAMAIS le mot «Ingénieur» dans un titre de poste — utilise «Développeur»,
    «Développeur Principal» ou «Technologue». C'est une exigence légale au Québec (OIQ).
-7. N'écris PAS de professional_summary — laisse le champ vide ("").
-8. Ajoute un champ `modification_note` au premier niveau contenant UNE phrase décrivant les changements clés (ex: "Mis en avant l'expérience en infrastructure cloud et Kubernetes, retiré les points spécifiques à la santé").
-9. La structure de sortie doit être identique au YAML d'entrée (plus le champ `modification_note`).
+6. N'écris PAS de professional_summary — laisse le champ vide ("").
+7. Ajoute un champ `modification_note` au premier niveau avec :
+   a) UNE phrase décrivant les changements clés effectués.
+   b) Si le poste valorise des technologies ou compétences absentes du CV qui seraient
+      réellement utiles, liste-les comme suggestions entre parenthèses, ex. :
+      «Mis en avant l'expérience cloud. Suggestion : La maîtrise d'AWS et de Redis Streams
+      est valorisée dans ce poste — souhaites-tu les ajouter ?»
+8. La structure de sortie doit être identique au YAML d'entrée (plus le champ `modification_note`).
 
 CV de base :
 ```yaml

@@ -6,418 +6,351 @@
 <title>Job Dashboard</title>
 <style>
   :root {
-    --bg: #0f1117;
-    --bg2: #1a1d27;
-    --bg3: #242834;
-    --border: #2e3345;
-    --text: #e1e4ed;
-    --text2: #8b90a0;
-    --accent: #3b82f6;
-    --green: #10b981;
-    --yellow: #f59e0b;
-    --red: #ef4444;
-    --purple: #8b5cf6;
-    --cyan: #06b6d4;
+    --bg: #0f1117; --bg2: #1a1d27; --bg3: #242834; --border: #2e3345;
+    --text: #e1e4ed; --text2: #8b90a0; --accent: #3b82f6; --green: #10b981;
+    --yellow: #f59e0b; --red: #ef4444; --purple: #8b5cf6; --cyan: #06b6d4;
     --radius: 8px;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
 
-  /* ── Stats bar ─────────────────────────────────────────── */
-  .stats-bar {
-    display: flex;
-    gap: 24px;
-    padding: 16px 24px;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    align-items: center;
+  .navbar {
+    display:flex; gap:12px; padding:10px 20px; background:var(--bg2);
+    border-bottom:1px solid var(--border); align-items:center;
   }
-  .stats-bar h1 {
-    font-size: 18px;
-    font-weight: 700;
-    margin-right: auto;
+  .navbar h1 { font-size:17px; font-weight:700; margin-right:16px; }
+  .nav-stats { display:flex; gap:16px; margin-right:auto; }
+  .nav-stat { text-align:center; }
+  .nav-stat-val { font-size:18px; font-weight:700; }
+  .nav-stat-lbl { font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; }
+  .nav-btn {
+    padding:6px 14px; border-radius:var(--radius); border:1px solid var(--border);
+    background:var(--bg3); color:var(--text); font-size:12px; font-weight:600;
+    cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap;
   }
-  .stat {
-    text-align: center;
-  }
-  .stat-value {
-    font-size: 22px;
-    font-weight: 700;
-  }
-  .stat-label {
-    font-size: 11px;
-    color: var(--text2);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+  .nav-btn:hover { border-color:var(--accent); background:var(--bg); }
 
-  /* ── Kanban ────────────────────────────────────────────── */
-  .kanban {
-    display: flex;
-    gap: 12px;
-    padding: 16px;
-    overflow-x: auto;
-    min-height: calc(100vh - 120px);
-    align-items: flex-start;
-  }
+  .kanban { display:flex; gap:10px; padding:12px; overflow-x:auto; align-items:flex-start; max-height:78vh; min-height:420px; }
   .column {
-    flex: 0 0 260px;
-    background: var(--bg2);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 140px);
+    flex:0 0 240px; background:var(--bg2); border-radius:var(--radius);
+    border:1px solid var(--border); display:flex; flex-direction:column;
+    max-height:calc(78vh - 24px); min-height:120px;
   }
   .column-header {
-    padding: 12px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0;
+    padding:10px 12px; font-size:12px; font-weight:600; text-transform:uppercase;
+    letter-spacing:.5px; border-bottom:1px solid var(--border);
+    display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
   }
   .column-count {
-    background: var(--bg3);
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 12px;
-    color: var(--text2);
+    background:var(--bg3); padding:2px 7px; border-radius:10px;
+    font-size:11px; color:var(--text2);
   }
-  .column-body {
-    padding: 8px;
-    overflow-y: auto;
-    flex: 1;
-  }
+  .column-body { padding:6px; overflow-y:auto; flex:1; min-height:40px; }
+  .column-body.drag-over { background:rgba(59,130,246,.08); border-radius:var(--radius); }
 
-  /* ── Job card ──────────────────────────────────────────── */
   .card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: border-color 0.15s, transform 0.1s;
+    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius);
+    padding:10px; margin-bottom:6px; cursor:grab; transition:border-color .15s,transform .1s;
+    position:relative;
   }
-  .card:hover {
-    border-color: var(--accent);
-    transform: translateY(-1px);
-  }
+  .card:hover { border-color:var(--accent); transform:translateY(-1px); }
+  .card.dragging { opacity:.5; }
   .card-score {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-bottom: 6px;
+    display:inline-block; font-size:10px; font-weight:700; padding:1px 5px;
+    border-radius:4px; margin-bottom:4px;
   }
-  .score-high { background: rgba(16,185,129,0.2); color: var(--green); }
-  .score-mid  { background: rgba(245,158,11,0.2); color: var(--yellow); }
-  .score-low  { background: rgba(139,92,246,0.2); color: var(--purple); }
-  .card-title {
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.3;
-    margin-bottom: 4px;
+  .score-high { background:rgba(16,185,129,.2); color:var(--green); }
+  .score-mid  { background:rgba(245,158,11,.2); color:var(--yellow); }
+  .score-low  { background:rgba(139,92,246,.2); color:var(--purple); }
+  .card-title { font-size:12px; font-weight:600; line-height:1.3; margin-bottom:3px; }
+  .card-company { font-size:11px; color:var(--text2); margin-bottom:3px; }
+  .card-meta { display:flex; gap:6px; font-size:10px; color:var(--text2); align-items:center; flex-wrap:wrap; }
+  .badge { display:inline-flex; align-items:center; gap:2px; padding:1px 5px; border-radius:4px; font-size:9px; font-weight:600; }
+  .badge-easy { background:rgba(16,185,129,.15); color:var(--green); }
+  .badge-remote { background:rgba(59,130,246,.15); color:var(--accent); }
+  .card-discard {
+    position:absolute; top:6px; right:6px; background:none; border:none;
+    color:var(--text2); cursor:pointer; font-size:14px; line-height:1;
+    opacity:0; transition:opacity .15s;
   }
-  .card-company {
-    font-size: 12px;
-    color: var(--text2);
-    margin-bottom: 4px;
-  }
-  .card-meta {
-    display: flex;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--text2);
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-  }
-  .badge-easy { background: rgba(16,185,129,0.15); color: var(--green); }
-  .badge-remote { background: rgba(59,130,246,0.15); color: var(--accent); }
-  .badge-interview { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .card:hover .card-discard { opacity:1; }
+  .card-discard:hover { color:var(--red); }
 
-  /* ── Collapsed section ─────────────────────────────────── */
-  .collapsed-section {
-    padding: 0 16px 16px;
+  .bottom-section { padding:0 12px 12px; border-top:1px solid var(--border); margin-top:4px; }
+  .bottom-header { display:flex; gap:10px; align-items:center; padding:10px 0; flex-wrap:wrap; }
+  .bottom-header h2 { font-size:14px; font-weight:600; }
+  .search-input {
+    background:var(--bg3); border:1px solid var(--border); color:var(--text);
+    padding:6px 10px; border-radius:var(--radius); font-size:12px; width:220px;
   }
-  .collapsed-toggle {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 16px;
-    color: var(--text2);
-    font-size: 13px;
-    cursor: pointer;
-    width: 100%;
-    text-align: left;
+  .search-input:focus { outline:none; border-color:var(--accent); }
+  .filter-btn {
+    padding:4px 10px; border-radius:var(--radius); border:1px solid var(--border);
+    background:var(--bg3); color:var(--text2); font-size:11px; cursor:pointer;
   }
-  .collapsed-toggle:hover { border-color: var(--accent); }
-  .collapsed-body {
-    display: none;
-    padding: 8px 0;
+  .filter-btn:hover, .filter-btn.active { border-color:var(--accent); color:var(--accent); }
+  .send-review-btn {
+    padding:8px 20px; border-radius:var(--radius); border:none;
+    background:var(--accent); color:#fff; font-size:13px; font-weight:700;
+    cursor:pointer; margin-left:auto;
   }
-  .collapsed-body.open { display: block; }
-  .collapsed-row {
-    display: flex;
-    gap: 16px;
-    padding: 8px 12px;
-    align-items: center;
-    font-size: 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
+  .send-review-btn:hover { opacity:.85; }
+  .send-review-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .delete-sel-btn {
+    padding:8px 16px; border-radius:var(--radius); border:1px solid var(--red);
+    background:transparent; color:var(--red); font-size:13px; font-weight:600;
+    cursor:pointer;
   }
-  .collapsed-row:hover { background: var(--bg3); }
+  .delete-sel-btn:hover { background:rgba(239,68,68,.1); }
+  .delete-sel-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .bottom-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .bottom-table th {
+    text-align:left; padding:6px 10px; color:var(--text2); font-size:11px;
+    text-transform:uppercase; letter-spacing:.3px; border-bottom:1px solid var(--border);
+  }
+  .bottom-table td { padding:6px 10px; border-bottom:1px solid var(--border); }
+  .bottom-table tr:hover { background:var(--bg3); }
+  .bottom-table tr { cursor:pointer; }
+  .row-checkbox { width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
 
-  /* ── Detail panel ──────────────────────────────────────── */
-  .panel-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 100;
-  }
-  .panel-overlay.open { display: block; }
+  .panel-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; }
+  .panel-overlay.open { display:block; }
   .panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 520px;
-    max-width: 90vw;
-    height: 100vh;
-    background: var(--bg2);
-    border-left: 1px solid var(--border);
-    z-index: 101;
-    display: none;
-    flex-direction: column;
-    overflow: hidden;
+    position:fixed; top:0; right:0; width:540px; max-width:92vw; height:100vh;
+    background:var(--bg2); border-left:1px solid var(--border); z-index:101;
+    display:none; flex-direction:column; overflow:hidden;
   }
-  .panel.open { display: flex; }
+  .panel.open { display:flex; }
   .panel-header {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-shrink: 0;
+    padding:16px 20px; border-bottom:1px solid var(--border);
+    display:flex; justify-content:space-between; align-items:flex-start; flex-shrink:0;
   }
-  .panel-close {
-    background: none;
-    border: none;
-    color: var(--text2);
-    font-size: 22px;
-    cursor: pointer;
-    padding: 4px;
-    line-height: 1;
-  }
-  .panel-close:hover { color: var(--text); }
-  .panel-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-  }
-
-  /* ── Detail sections ───────────────────────────────────── */
-  .detail-section {
-    margin-bottom: 20px;
-  }
+  .panel-close { background:none; border:none; color:var(--text2); font-size:22px; cursor:pointer; padding:4px; line-height:1; }
+  .panel-close:hover { color:var(--text); }
+  .panel-body { flex:1; overflow-y:auto; padding:20px; }
+  .detail-section { margin-bottom:18px; }
   .detail-section h3 {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text2);
-    margin-bottom: 8px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--border);
+    font-size:12px; font-weight:600; text-transform:uppercase;
+    letter-spacing:.5px; color:var(--text2); margin-bottom:8px;
+    padding-bottom:4px; border-bottom:1px solid var(--border);
   }
-
-  /* Timeline */
-  .timeline { padding-left: 16px; border-left: 2px solid var(--border); }
-  .timeline-item {
-    position: relative;
-    padding: 0 0 16px 16px;
-    font-size: 13px;
+  .action-btn {
+    display:inline-flex; align-items:center; gap:8px; padding:10px 18px;
+    border-radius:var(--radius); font-size:13px; font-weight:600;
+    cursor:pointer; border:none; text-decoration:none; color:#fff;
   }
-  .timeline-item::before {
-    content: '';
-    position: absolute;
-    left: -21px;
-    top: 4px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-    border: 2px solid var(--bg2);
-  }
-  .timeline-item.active::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .timeline-label { font-weight: 600; }
-  .timeline-date { font-size: 11px; color: var(--text2); }
-
-  /* Status update form */
-  .status-form {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
+  .action-btn:hover { opacity:.9; text-decoration:none; }
+  .action-btn svg { width:18px; height:18px; }
+  .btn-linkedin { background:#0a66c2; }
+  .btn-cv { background:var(--green); }
+  .btn-review { background:var(--accent); }
+  .status-form { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   .status-form select, .status-form input {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 6px 10px;
-    border-radius: var(--radius);
-    font-size: 13px;
+    background:var(--bg3); border:1px solid var(--border); color:var(--text);
+    padding:6px 10px; border-radius:var(--radius); font-size:13px;
   }
-  .status-form select:focus, .status-form input:focus {
-    outline: none;
-    border-color: var(--accent);
+  .status-form select:focus, .status-form input:focus { outline:none; border-color:var(--accent); }
+  .btn { padding:6px 14px; border-radius:var(--radius); border:1px solid var(--border); background:var(--accent); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+  .btn:hover { opacity:.85; }
+  .btn-sm { padding:4px 10px; font-size:12px; }
+  .btn-outline { background:transparent; color:var(--text); }
+  .btn-outline:hover { background:var(--bg3); }
+  .timeline { padding-left:16px; border-left:2px solid var(--border); }
+  .timeline-item { position:relative; padding:0 0 14px 16px; font-size:13px; }
+  .timeline-item::before {
+    content:''; position:absolute; left:-21px; top:4px; width:8px; height:8px;
+    border-radius:50%; background:var(--accent); border:2px solid var(--bg2);
   }
-  .btn {
-    padding: 6px 14px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--accent);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-  .btn:hover { opacity: 0.85; }
-  .btn-sm { padding: 4px 10px; font-size: 12px; }
-  .btn-outline { background: transparent; color: var(--text); }
-  .btn-outline:hover { background: var(--bg3); }
-
-  /* Notes */
+  .timeline-item.active::before { background:var(--green); box-shadow:0 0 6px var(--green); }
+  .timeline-label { font-weight:600; }
+  .timeline-date { font-size:11px; color:var(--text2); }
   .notes-area {
-    width: 100%;
-    min-height: 60px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: var(--radius);
-    padding: 8px;
-    font-size: 13px;
-    font-family: inherit;
-    resize: vertical;
+    width:100%; min-height:60px; background:var(--bg3); border:1px solid var(--border);
+    color:var(--text); border-radius:var(--radius); padding:8px; font-size:13px;
+    font-family:inherit; resize:vertical;
   }
-  .notes-area:focus { outline: none; border-color: var(--accent); }
+  .notes-area:focus { outline:none; border-color:var(--accent); }
+  .contact-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:10px; margin-bottom:8px; font-size:13px; }
+  .cover-email { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:12px; font-size:13px; white-space:pre-wrap; max-height:200px; overflow-y:auto; }
 
-  /* Contact card */
-  .contact-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px;
-    margin-bottom: 8px;
-    font-size: 13px;
+  .modal-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+    z-index:200; justify-content:center; align-items:center;
   }
-  .contact-name { font-weight: 600; }
-  .contact-title { font-size: 12px; color: var(--text2); }
-  .msg-preview {
-    margin-top: 6px;
-    padding: 6px 8px;
-    background: var(--bg);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--text2);
-    white-space: pre-wrap;
-    max-height: 100px;
-    overflow-y: auto;
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+    width:660px; max-width:94vw; max-height:90vh; padding:0;
+    display:flex; flex-direction:column;
   }
-  .msg-status-badge {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-    margin-left: 4px;
+  .modal-header { padding:20px 24px 12px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; border-bottom:1px solid var(--border); }
+  .modal-header h2 { font-size:18px; font-weight:700; }
+  .modal-body { padding:20px 24px; overflow-y:auto; flex:1; min-height:0; }
+  .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; flex-shrink:0; }
+  .form-group { margin-bottom:16px; }
+  .form-label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:.3px; }
+  .form-input {
+    width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border);
+    color:var(--text); border-radius:var(--radius); font-size:14px;
+  }
+  .form-input:focus { outline:none; border-color:var(--accent); }
+  .form-row { display:flex; gap:12px; }
+  .form-row .form-group { flex:1; }
+  .form-select {
+    width:100%; padding:8px 12px; background:var(--bg3); border:1px solid var(--border);
+    color:var(--text); border-radius:var(--radius); font-size:14px; appearance:auto;
+  }
+  .radar-container { display:flex; justify-content:center; padding:8px 0; }
+  .radar-container canvas { cursor:pointer; }
+  .steps { display:flex; gap:4px; justify-content:center; margin-bottom:16px; }
+  .step-dot { width:8px; height:8px; border-radius:50%; background:var(--border); }
+  .step-dot.active { background:var(--accent); }
+  .cv-dropdown { position:relative; }
+  .cv-menu {
+    display:none; position:absolute; top:100%; right:0; margin-top:4px;
+    background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius);
+    min-width:320px; max-height:400px; overflow-y:auto; z-index:50; box-shadow:0 8px 32px rgba(0,0,0,.4);
+  }
+  .cv-menu.open { display:block; }
+  .cv-menu a { display:block; padding:8px 12px; font-size:12px; border-bottom:1px solid var(--border); color:var(--text); text-decoration:none; }
+  .cv-menu a:hover { background:var(--bg3); }
+  .cv-editor-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+    z-index:300; justify-content:center; align-items:center;
+  }
+  .cv-editor-overlay.open { display:flex; }
+  .cv-editor {
+    background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+    width:900px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column;
+  }
+  .cv-editor-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .cv-editor-header h2 { font-size:16px; font-weight:700; }
+  .cv-editor-body { flex:1; overflow:hidden; padding:0; }
+  .cv-editor-body textarea {
+    width:100%; height:100%; min-height:500px; background:var(--bg); border:none;
+    color:var(--text); font-family:'SF Mono',Monaco,Menlo,monospace; font-size:13px;
+    padding:16px; resize:none; outline:none; line-height:1.5;
+  }
+  .cv-editor-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+  .cv-menu .cv-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--border); }
+  .cv-menu .cv-item span { font-size:12px; }
+  .cv-menu .cv-edit-btn { background:none; border:1px solid var(--border); color:var(--text2); padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer; }
+  .cv-menu .cv-edit-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* Connect buttons */
+  .connect-card {
+    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:14px;
+  }
+  .connect-card .icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .connect-card .icon svg { width:24px; height:24px; }
+  .connect-card .info { flex:1; }
+  .connect-card .info h4 { font-size:14px; font-weight:600; margin-bottom:2px; }
+  .connect-card .info p { font-size:12px; color:var(--text2); margin:0; }
+  .connect-btn {
+    padding:8px 16px; border-radius:var(--radius); border:none;
+    font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+  .connect-btn:hover { opacity:.85; }
+  .connect-btn.linkedin { background:#0a66c2; color:#fff; }
+  .connect-btn.telegram { background:#229ED9; color:#fff; }
+  .connect-btn.connected { background:rgba(16,185,129,.15); color:var(--green); cursor:default; }
+  .connect-btn.connected:hover { opacity:1; }
+
+  /* Tag input */
+  .tag-wrap {
+    display:flex; flex-wrap:wrap; gap:4px; padding:6px 8px;
+    background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius);
+    min-height:38px; align-items:center; cursor:text;
+  }
+  .tag-wrap:focus-within { border-color:var(--accent); }
+  .tag {
+    display:inline-flex; align-items:center; gap:4px; padding:2px 8px;
+    background:rgba(59,130,246,.15); color:var(--accent); border-radius:4px;
+    font-size:12px; font-weight:600;
+  }
+  .tag .remove { cursor:pointer; font-size:14px; line-height:1; opacity:.7; }
+  .tag .remove:hover { opacity:1; }
+  .tag-input {
+    border:none; background:transparent; color:var(--text); font-size:13px;
+    outline:none; min-width:80px; flex:1;
   }
 
-  /* Cover email */
-  .cover-email {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px;
-    font-size: 13px;
-    white-space: pre-wrap;
-    max-height: 200px;
-    overflow-y: auto;
+  /* Checkbox grid */
+  .checkbox-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .checkbox-item {
+    display:flex; align-items:center; gap:6px; padding:6px 10px;
+    background:var(--bg); border:1px solid var(--border); border-radius:var(--radius);
+    cursor:pointer; font-size:13px; transition:border-color .15s;
   }
+  .checkbox-item:hover { border-color:var(--accent); }
+  .checkbox-item.checked { border-color:var(--accent); background:rgba(59,130,246,.08); }
+  .checkbox-item input { accent-color:var(--accent); }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+  /* Radar weight labels */
+  .weight-labels { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:8px; }
+  .weight-chip {
+    display:inline-flex; align-items:center; gap:4px; padding:3px 8px;
+    background:var(--bg3); border:1px solid var(--border); border-radius:4px; font-size:11px;
+  }
+  .weight-chip .val { color:var(--accent); font-weight:700; }
+
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 </style>
 </head>
 <body>
 
-<!-- ── Stats Bar ──────────────────────────────────────────────────────── -->
-<div class="stats-bar">
-  <h1>📊 Job Dashboard</h1>
-  <div class="stat">
-    <div class="stat-value">{{ stats.total }}</div>
-    <div class="stat-label">Total Jobs</div>
+<div class="navbar">
+  <h1>Job Dashboard</h1>
+  <div class="nav-stats">
+    <div class="nav-stat"><div class="nav-stat-val">{{ stats.total }}</div><div class="nav-stat-lbl">Total</div></div>
+    <div class="nav-stat"><div class="nav-stat-val" style="color:var(--purple)">{{ stats.applied }}</div><div class="nav-stat-lbl">Applied</div></div>
+    <div class="nav-stat"><div class="nav-stat-val" style="color:var(--yellow)">{{ stats.interviews }}</div><div class="nav-stat-lbl">Interviews</div></div>
+    <div class="nav-stat"><div class="nav-stat-val" style="color:var(--green)">{{ stats.response_rate }}%</div><div class="nav-stat-lbl">Response</div></div>
   </div>
-  <div class="stat">
-    <div class="stat-value" style="color: var(--purple)">{{ stats.applied }}</div>
-    <div class="stat-label">Applied</div>
+  <div class="cv-dropdown">
+    <button class="nav-btn" onclick="toggleCvMenu()">&#128196; My CVs ({{ cv_files|length }})</button>
+    <div class="cv-menu" id="cv-menu">
+      {% if cv_files %}
+        {% for cv in cv_files %}
+        <div class="cv-item">
+          <span>{{ cv.name }}</span>
+          <button class="cv-edit-btn" onclick="event.stopPropagation();openCvEditor('{{ cv.filename }}','{{ cv.name }}')">&#9998; Edit Source</button>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="padding:12px;color:var(--text2);font-size:12px">No source CVs found</div>
+      {% endif %}
+    </div>
   </div>
-  <div class="stat">
-    <div class="stat-value" style="color: var(--yellow)">{{ stats.interviews }}</div>
-    <div class="stat-label">Interviews</div>
-  </div>
-  <div class="stat">
-    <div class="stat-value" style="color: var(--green)">{{ stats.response_rate }}%</div>
-    <div class="stat-label">Response Rate</div>
-  </div>
+  <button class="nav-btn" onclick="openPrefsModal()">&#9881; Preferences</button>
 </div>
 
-<!-- ── Kanban Board ───────────────────────────────────────────────────── -->
-<div class="kanban">
+<div class="kanban" id="kanban">
   {% for col in columns %}
-  <div class="column">
-    <div class="column-header" style="border-top: 3px solid {{ col.color }}">
+  <div class="column" data-column="{{ col.id }}" data-status="{{ col.primary_status }}">
+    <div class="column-header" style="border-top:3px solid {{ col.color }}">
       {{ col.label }}
-      <span class="column-count">{{ col.jobs | length }}</span>
+      <span class="column-count">{{ col.jobs|length }}</span>
     </div>
-    <div class="column-body">
+    <div class="column-body" data-column="{{ col.id }}" data-status="{{ col.primary_status }}"
+         ondrop="dropCard(event)" ondragover="dragOver(event)" ondragleave="dragLeave(event)">
       {% for job in col.jobs %}
-      <div class="card" onclick="openDetail({{ job.id }})">
+      <div class="card" draggable="true" ondragstart="dragStart(event)" data-job-id="{{ job.id }}"
+           onclick="openDetail({{ job.id }})">
+        <button class="card-discard" onclick="event.stopPropagation();discardJob({{ job.id }})" title="Discard">&#10005;</button>
         <div class="card-score {% if job.relevance_score >= 70 %}score-high{% elif job.relevance_score >= 25 %}score-mid{% else %}score-low{% endif %}">
           {{ job.relevance_score or 0 }}/100
         </div>
         <div class="card-title">{{ job.title }}</div>
         <div class="card-company">{{ job.company }}</div>
         <div class="card-meta">
-          {% if job.is_easy_apply %}<span class="badge badge-easy">⚡ Easy</span>{% endif %}
-          {% if job.is_remote %}<span class="badge badge-remote">🏠 Remote</span>{% endif %}
-          {% if job.interview_date %}<span class="badge badge-interview">📅 {{ job.interview_date.strftime('%b %d') }}</span>{% endif %}
+          {% if job.is_easy_apply %}<span class="badge badge-easy">&#9889; Easy</span>{% endif %}
+          {% if job.is_remote %}<span class="badge badge-remote">&#127968; Remote</span>{% endif %}
           <span>{{ job.discovered_at.strftime('%b %d') if job.discovered_at else '' }}</span>
         </div>
       </div>
@@ -427,249 +360,1022 @@
   {% endfor %}
 </div>
 
-<!-- ── Collapsed (Rejected/Discovered/Failed) ─────────────────────────── -->
-{% if collapsed_jobs %}
-<div class="collapsed-section">
-  <button class="collapsed-toggle" onclick="toggleCollapsed()">
-    ▶ Skipped / Rejected / Other ({{ collapsed_jobs | length }})
-  </button>
-  <div class="collapsed-body" id="collapsed-body">
-    {% for job in collapsed_jobs %}
-    <div class="collapsed-row" onclick="openDetail({{ job.id }})">
-      <span class="card-score {% if job.relevance_score >= 70 %}score-high{% elif job.relevance_score >= 25 %}score-mid{% else %}score-low{% endif %}" style="font-size:10px">
-        {{ job.relevance_score or 0 }}
-      </span>
-      <span style="flex:1;font-weight:600">{{ job.title }}</span>
-      <span style="color:var(--text2)">{{ job.company }}</span>
-      <span style="color:var(--text2);font-size:11px">{{ (job.status.value if job.status else '') | replace('_', ' ') | title }}</span>
-      <span style="color:var(--text2);font-size:11px">{{ job.discovered_at.strftime('%b %d') if job.discovered_at else '' }}</span>
-    </div>
-    {% endfor %}
+<div class="bottom-section">
+  <div class="bottom-header">
+    <h2>Skipped / Rejected / Other ({{ collapsed_jobs|length }})</h2>
+    <input class="search-input" type="text" id="bottom-search" placeholder="Search jobs..." oninput="filterBottom()">
+    <button class="filter-btn" id="sort-score" onclick="sortBottom('score')">Score &#8597;</button>
+    <button class="filter-btn" id="sort-date" onclick="sortBottom('date')">Date &#8597;</button>
+    <button class="send-review-btn" id="send-review-btn" onclick="sendToReview()" disabled>
+      &#128203; Send Selected to Review
+    </button>
+    <button class="delete-sel-btn" id="delete-sel-btn" onclick="deleteSelected()" disabled>
+      &#128465; Delete Selected
+    </button>
   </div>
+  <table class="bottom-table" id="bottom-table">
+    <thead>
+      <tr>
+        <th style="width:30px"><input type="checkbox" class="row-checkbox" onchange="toggleAllChecks(this)"></th>
+        <th style="width:50px">Score</th>
+        <th>Title</th>
+        <th>Company</th>
+        <th style="width:100px">Status</th>
+        <th style="width:80px">Date</th>
+      </tr>
+    </thead>
+    <tbody id="bottom-tbody">
+      {% for job in collapsed_jobs %}
+      <tr data-job-id="{{ job.id }}"
+          data-score="{{ job.relevance_score or 0 }}"
+          data-date="{{ job.discovered_at.isoformat() if job.discovered_at else '' }}"
+          data-search="{{ job.title|lower }} {{ job.company|lower }}">
+        <td onclick="event.stopPropagation()"><input type="checkbox" class="row-checkbox job-check" data-job-id="{{ job.id }}" onchange="updateSendBtn()"></td>
+        <td>
+          <span class="card-score {% if (job.relevance_score or 0) >= 70 %}score-high{% elif (job.relevance_score or 0) >= 25 %}score-mid{% else %}score-low{% endif %}" style="font-size:10px">
+            {{ job.relevance_score or 0 }}
+          </span>
+        </td>
+        <td style="font-weight:600;cursor:pointer" onclick="openDetail({{ job.id }})">{{ job.title }}</td>
+        <td style="color:var(--text2)">{{ job.company }}</td>
+        <td style="color:var(--text2);font-size:11px">{{ (job.status.value if job.status else '')|replace('_',' ')|title }}</td>
+        <td style="color:var(--text2);font-size:11px">{{ job.discovered_at.strftime('%b %d') if job.discovered_at else '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-{% endif %}
 
-<!-- ── Detail Panel ───────────────────────────────────────────────────── -->
 <div class="panel-overlay" id="panel-overlay" onclick="closeDetail()"></div>
 <div class="panel" id="detail-panel">
   <div class="panel-header">
     <div id="panel-header-content"></div>
-    <button class="panel-close" onclick="closeDetail()">✕</button>
+    <button class="panel-close" onclick="closeDetail()">&#10005;</button>
   </div>
   <div class="panel-body" id="panel-body">
     <div style="text-align:center;color:var(--text2);padding:40px">Loading...</div>
   </div>
 </div>
 
-<script>
-const STATUS_LABELS = {{ status_labels | tojson }};
-const MANUAL_STATUSES = {{ manual_statuses | tojson }};
+<!-- CV Source Editor Modal -->
+<div class="cv-editor-overlay" id="cv-editor-overlay" onclick="if(event.target===this)closeCvEditor()">
+  <div class="cv-editor">
+    <div class="cv-editor-header">
+      <h2 id="cv-editor-title">Edit CV Source</h2>
+      <button class="panel-close" onclick="closeCvEditor()">&#10005;</button>
+    </div>
+    <div class="cv-editor-body">
+      <textarea id="cv-editor-textarea" spellcheck="false"></textarea>
+    </div>
+    <div class="cv-editor-footer">
+      <button class="btn btn-outline" onclick="closeCvEditor()">Cancel</button>
+      <button class="btn" id="cv-save-btn" onclick="saveCvSource()" style="background:var(--green)">&#10003; Save</button>
+    </div>
+  </div>
+</div>
 
-// ── Panel open/close ──────────────────────────────────────
+<div class="modal-overlay" id="prefs-modal" onclick="if(event.target===this)closePrefsModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="prefs-title">Setup Your Profile</h2>
+      <button class="panel-close" onclick="closePrefsModal()">&#10005;</button>
+    </div>
+    <div class="modal-body" id="prefs-body"></div>
+    <div class="modal-footer" id="prefs-footer"></div>
+  </div>
+</div>
+
+<script>
+var STATUS_LABELS = {{ status_labels | tojson }};
+var COLUMN_STATUSES = {{ column_statuses | tojson }};
+var HAS_PREFS = {{ has_prefs | tojson }};
+var SAVED_PREFS = {{ prefs | tojson }};
+var LINKEDIN_CONNECTED = {{ linkedin_connected | tojson }};
+var TELEGRAM_CONNECTED = {{ telegram_connected | tojson }};
+var GMAIL_CONNECTED = {{ gmail_connected | tojson }};
+
+// Collapsed statuses (jobs eligible for "send to review")
+var COLLAPSED = ['discovered','summarized','rejected','failed'];
+
+function toggleCvMenu() { document.getElementById('cv-menu').classList.toggle('open'); }
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.cv-dropdown')) document.getElementById('cv-menu').classList.remove('open');
+});
+
+// ── CV Source Editor ──────────────────────────────────────
+var cvEditorFilename = '';
+async function openCvEditor(filename, label) {
+  document.getElementById('cv-menu').classList.remove('open');
+  cvEditorFilename = filename;
+  document.getElementById('cv-editor-title').textContent = 'Edit ' + label;
+  document.getElementById('cv-editor-textarea').value = 'Loading...';
+  document.getElementById('cv-editor-overlay').classList.add('open');
+  var r = await fetch('/api/cv-source/' + encodeURIComponent(filename));
+  if (r.ok) {
+    var d = await r.json();
+    document.getElementById('cv-editor-textarea').value = d.content;
+  } else {
+    document.getElementById('cv-editor-textarea').value = '# Error loading file';
+  }
+}
+function closeCvEditor() { document.getElementById('cv-editor-overlay').classList.remove('open'); }
+async function saveCvSource() {
+  var btn = document.getElementById('cv-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  var content = document.getElementById('cv-editor-textarea').value;
+  var r = await fetch('/api/cv-source/' + encodeURIComponent(cvEditorFilename), {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({content: content})
+  });
+  if (r.ok) { btn.textContent = '\u2713 Saved'; setTimeout(function(){ btn.disabled=false; btn.innerHTML='&#10003; Save'; }, 1500); }
+  else { btn.textContent = 'Error'; btn.disabled = false; }
+}
+
+// ── Panel ─────────────────────────────────────────────────
+var _currentDetailJobId = null;
 function openDetail(jobId) {
   document.getElementById('panel-overlay').classList.add('open');
   document.getElementById('detail-panel').classList.add('open');
   document.getElementById('panel-body').innerHTML = '<div style="text-align:center;color:var(--text2);padding:40px">Loading...</div>';
-  document.getElementById('panel-header-content').innerHTML = '';
   loadJobDetail(jobId);
 }
-
 function closeDetail() {
+  // Auto-save notes before closing
+  var notesEl = document.getElementById('notes-area');
+  if (notesEl && _currentDetailJobId) {
+    fetch('/api/jobs/'+_currentDetailJobId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:notesEl.value})});
+  }
+  _currentDetailJobId = null;
   document.getElementById('panel-overlay').classList.remove('open');
   document.getElementById('detail-panel').classList.remove('open');
 }
-
-function toggleCollapsed() {
-  const body = document.getElementById('collapsed-body');
-  body.classList.toggle('open');
-  const btn = body.previousElementSibling;
-  btn.textContent = body.classList.contains('open')
-    ? btn.textContent.replace('▶', '▼')
-    : btn.textContent.replace('▼', '▶');
-}
-
-// ── Load job detail ───────────────────────────────────────
 async function loadJobDetail(jobId) {
-  const resp = await fetch(`/api/jobs/${jobId}`);
-  if (!resp.ok) { document.getElementById('panel-body').innerHTML = '<p>Error loading job.</p>'; return; }
-  const job = await resp.json();
-  renderDetail(job);
+  var r = await fetch('/api/jobs/' + jobId);
+  if (!r.ok) { document.getElementById('panel-body').innerHTML = '<p>Error loading job.</p>'; return; }
+  renderDetail(await r.json());
 }
-
-function esc(s) {
-  if (!s) return '';
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
+function esc(s) { if(!s) return ''; var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 function renderDetail(job) {
-  // Header
-  const scoreClass = (job.relevance_score || 0) >= 70 ? 'score-high' : (job.relevance_score || 0) >= 25 ? 'score-mid' : 'score-low';
-  document.getElementById('panel-header-content').innerHTML = `
-    <div class="card-score ${scoreClass}" style="margin-bottom:6px">${job.relevance_score || 0}/100</div>
-    <div style="font-size:16px;font-weight:700;margin-bottom:2px">${esc(job.title)}</div>
-    <div style="font-size:14px;color:var(--text2)">${esc(job.company)} · ${esc(job.location || 'N/A')}</div>
-    ${job.job_url ? `<a href="${esc(job.job_url)}" target="_blank" style="font-size:12px">View on LinkedIn ↗</a>` : ''}
-  `;
+  var sc = (job.relevance_score||0)>=70?'score-high':(job.relevance_score||0)>=25?'score-mid':'score-low';
+  var isCollapsed = COLLAPSED.indexOf(job.status) !== -1;
+  var isPending = job.status === 'notified';
+  var hasPlan = job.tailored_cv_path || (job.contacts && job.contacts.length > 0);
 
-  let html = '';
+  _currentDetailJobId = job.id;
 
-  // ── Status update ──
-  html += `<div class="detail-section">
-    <h3>Update Status</h3>
-    <div class="status-form">
-      <select id="status-select">
-        <option value="">Current: ${esc(STATUS_LABELS[job.status] || job.status)}</option>
-        ${MANUAL_STATUSES.map(s => `<option value="${s}" ${s === job.status ? 'selected' : ''}>${esc(STATUS_LABELS[s] || s)}</option>`).join('')}
-      </select>
-      <input type="datetime-local" id="interview-date" value="${job.interview_date ? job.interview_date.slice(0,16) : ''}" style="width:180px" placeholder="Interview date">
-      <button class="btn btn-sm" onclick="updateStatus(${job.id})">Save</button>
-    </div>
-  </div>`;
-
-  // ── Timeline ──
-  html += `<div class="detail-section"><h3>Timeline</h3><div class="timeline">`;
-  const events = [];
-  if (job.discovered_at) events.push({label: 'Discovered', date: job.discovered_at, status: 'discovered'});
-  // Infer events from current status progression
-  const statusOrder = ['discovered','summarized','notified','approved','cv_generated','applied','networking_done','response_received','interview_scheduled','interview_done','second_interview','offer','hired'];
-  const currentIdx = statusOrder.indexOf(job.status);
-  if (currentIdx >= 2) events.push({label: 'Notified', date: job.discovered_at});
-  if (currentIdx >= 3) events.push({label: 'Approved', date: null});
-  if (currentIdx >= 4) events.push({label: 'CV Generated', date: null});
-  if (job.applied_at) events.push({label: 'Applied', date: job.applied_at});
-  if (['response_received','interview_scheduled','interview_done','second_interview','offer','hired'].includes(job.status)) {
-    events.push({label: STATUS_LABELS[job.status], date: job.interview_date, status: job.status});
+  var headerHtml = '<div class="card-score ' + sc + '" style="margin-bottom:6px">' + (job.relevance_score||0) + '/100</div>'
+    + '<div style="font-size:16px;font-weight:700;margin-bottom:2px">' + esc(job.title) + '</div>'
+    + '<div style="font-size:14px;color:var(--text2);margin-bottom:10px">' + esc(job.company) + ' &middot; ' + esc(job.location||'N/A') + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  if (job.job_url) {
+    headerHtml += '<a href="' + esc(job.job_url) + '" target="_blank" class="action-btn btn-linkedin">'
+      + '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>'
+      + 'View on LinkedIn</a>';
   }
-  if (job.status === 'rejected') events.push({label: 'Rejected', date: null, status: 'rejected'});
-  if (job.status === 'denied') events.push({label: 'Denied', date: null, status: 'denied'});
-
-  events.forEach((ev, i) => {
-    const isLast = i === events.length - 1;
-    const dateStr = ev.date ? new Date(ev.date).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
-    html += `<div class="timeline-item ${isLast ? 'active' : ''}">
-      <div class="timeline-label">${esc(ev.label)}</div>
-      ${dateStr ? `<div class="timeline-date">${dateStr}</div>` : ''}
-    </div>`;
-  });
-  html += `</div></div>`;
-
-  // ── Score Analysis ──
-  if (job.summary) {
-    html += `<div class="detail-section">
-      <h3>Score Analysis</h3>
-      <div style="font-size:13px;color:var(--text2)">${esc(job.summary)}</div>
-    </div>`;
-  }
-
-  // ── Tailored CV ──
   if (job.tailored_cv_path) {
-    html += `<div class="detail-section">
-      <h3>Tailored CV</h3>
-      <a href="/api/jobs/${job.id}/cv" target="_blank" class="btn btn-sm btn-outline">📄 Download PDF</a>
-    </div>`;
+    headerHtml += '<a href="/api/jobs/' + job.id + '/cv" target="_blank" class="action-btn btn-cv">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>'
+      + 'Download Tailored CV</a>';
   }
-
-  // ── Cover Email ──
-  if (job.cover_email) {
-    html += `<div class="detail-section">
-      <h3>Cover Email</h3>
-      <div class="cover-email">${esc(job.cover_email)}</div>
-    </div>`;
+  // Action buttons based on status
+  if (isPending) {
+    headerHtml += '<button class="action-btn" style="background:var(--green)" onclick="event.preventDefault();runApplyPlan(' + job.id + ',this)">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+      + 'Apply (Generate Plan)</button>';
+    headerHtml += '<button class="action-btn" style="background:var(--text2)" onclick="event.preventDefault();skipJob(' + job.id + ',this)">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>'
+      + 'Skip</button>';
   }
+  if (isCollapsed) {
+    headerHtml += '<button class="action-btn btn-review" onclick="event.preventDefault();sendSingleToReview(' + job.id + ',this)">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg>'
+      + 'Send to Review</button>';
+    headerHtml += '<button class="action-btn" style="background:var(--red)" onclick="event.preventDefault();permanentlyDeleteJob(' + job.id + ')">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+      + 'Delete Permanently</button>';
+  }
+  headerHtml += '</div>';
+  document.getElementById('panel-header-content').innerHTML = headerHtml;
 
-  // ── Contacts & Outreach ──
-  if (job.contacts && job.contacts.length > 0) {
-    html += `<div class="detail-section"><h3>Contacts & Outreach (${job.contacts.length})</h3>`;
-    job.contacts.forEach(c => {
-      html += `<div class="contact-card">
-        <div class="contact-name">${esc(c.name)}${c.role ? ` · <span style="color:var(--text2);font-weight:normal">${esc(c.role)}</span>` : ''}</div>
-        ${c.title ? `<div class="contact-title">${esc(c.title)}</div>` : ''}
-        ${c.linkedin_url ? `<a href="${esc(c.linkedin_url)}" target="_blank" style="font-size:12px">LinkedIn ↗</a>` : ''}
-        ${c.email ? `<div style="font-size:12px">${esc(c.email)}</div>` : ''}`;
-      if (c.messages && c.messages.length > 0) {
-        c.messages.forEach(m => {
-          const statusColor = m.status === 'sent' ? 'var(--green)' : m.status === 'drafted' ? 'var(--yellow)' : 'var(--text2)';
-          html += `<div style="margin-top:4px">
-            <span style="font-size:11px;color:var(--text2)">${esc(m.channel || '')}</span>
-            <span class="msg-status-badge" style="background:${statusColor}22;color:${statusColor}">${esc(m.status || '')}</span>
-            ${m.sent_at ? `<span style="font-size:11px;color:var(--text2)"> · ${new Date(m.sent_at).toLocaleDateString()}</span>` : ''}
-          </div>
-          <div class="msg-preview">${esc(m.body)}</div>`;
-        });
-      }
-      html += `</div>`;
+  var html = '';
+
+  // Status + date (auto-defaults to today)
+  var todayStr = new Date().toISOString().slice(0,16);
+  var dateVal = job.interview_date ? job.interview_date.slice(0,16) : todayStr;
+  html += '<div class="detail-section">'
+    + '<h3>Update Status</h3>'
+    + '<div class="status-form">'
+    + '<select id="status-select" onchange="updateStatus(' + job.id + ')"><option value="">Current: ' + esc(STATUS_LABELS[job.status]||job.status) + '</option>';
+  COLUMN_STATUSES.forEach(function(c) {
+    html += '<option value="' + c.status + '"' + (c.status===job.status?' selected':'') + '>' + esc(c.label) + '</option>';
+  });
+  html += '</select>'
+    + '<div style="position:relative;display:inline-flex;align-items:center"><input type="datetime-local" id="interview-date" value="' + esc(dateVal) + '" style="width:180px" onchange="updateStatus(' + job.id + ')"></div>'
+    + '</div></div>';
+
+  html += '<div class="detail-section"><h3>Timeline</h3><div class="timeline">';
+  var events = [];
+  if (job.discovered_at) events.push({label:'Discovered',date:job.discovered_at});
+  var so=['discovered','summarized','notified','approved','cv_generated','applied','networking_done','response_received','interview_scheduled','interview_done','second_interview','offer','hired'];
+  var ci=so.indexOf(job.status);
+  if(ci>=2) events.push({label:'Notified',date:job.discovered_at});
+  if(ci>=3) events.push({label:'Approved',date:null});
+  if(ci>=4) events.push({label:'CV Generated',date:null});
+  if(job.applied_at) events.push({label:'Applied',date:job.applied_at});
+  if(['response_received','interview_scheduled','interview_done','second_interview','offer','hired'].indexOf(job.status)!==-1)
+    events.push({label:STATUS_LABELS[job.status],date:job.interview_date});
+  if(job.status==='rejected') events.push({label:'Rejected',date:null});
+  if(job.status==='denied') events.push({label:'Denied',date:null});
+  events.forEach(function(ev,i){
+    var last=i===events.length-1;
+    var ds=ev.date?new Date(ev.date).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    html+='<div class="timeline-item '+(last?'active':'')+'"><div class="timeline-label">'+esc(ev.label)+'</div>'+(ds?'<div class="timeline-date">'+ds+'</div>':'')+'</div>';
+  });
+  html+='</div></div>';
+
+  if(job.summary) html+='<div class="detail-section"><h3>Score Analysis</h3><div style="font-size:13px;color:var(--text2)">'+esc(job.summary)+'</div></div>';
+  if(job.cover_email) html+='<div class="detail-section"><h3>Cover Email</h3><div class="cover-email">'+esc(job.cover_email)+'</div></div>';
+
+  if(job.contacts&&job.contacts.length>0){
+    html+='<div class="detail-section"><h3>Contacts &amp; Outreach ('+job.contacts.length+')</h3>';
+    job.contacts.forEach(function(c){
+      html+='<div class="contact-card">';
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+      html+='<div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0">'+esc((c.name||'?').charAt(0).toUpperCase())+'</div>';
+      html+='<div><div style="font-weight:600">'+esc(c.name)+(c.role?' <span style="color:var(--text2);font-weight:normal;font-size:12px">&middot; '+esc(c.role)+'</span>':'')+'</div>';
+      if(c.title) html+='<div style="font-size:12px;color:var(--text2)">'+esc(c.title)+'</div>';
+      html+='</div></div>';
+      var links = [];
+      if(c.linkedin_url) links.push('<a href="'+esc(c.linkedin_url)+'" target="_blank" style="font-size:12px;display:inline-flex;align-items:center;gap:3px"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> Profile</a>');
+      if(c.email) links.push('<span style="font-size:12px;color:var(--text2)">&#9993; '+esc(c.email)+'</span>');
+      if(links.length) html+='<div style="display:flex;gap:10px;margin-bottom:4px">'+links.join('')+'</div>';
+      if(c.messages) c.messages.forEach(function(m){
+        var sc2=m.status==='sent'?'var(--green)':m.status==='drafted'?'var(--yellow)':'var(--text2)';
+        html+='<div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">';
+        html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">';
+        html+='<span style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase">'+esc(m.channel||'message')+'</span>';
+        html+='<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;background:'+sc2+'22;color:'+sc2+'">'+esc(m.status||'')+'</span>';
+        if(m.subject) html+='<span style="font-size:11px;color:var(--text)">'+esc(m.subject)+'</span>';
+        html+='</div>';
+        html+='<div style="padding:6px 8px;background:var(--bg);border-radius:4px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:120px;overflow-y:auto">'+esc(m.body)+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';
     });
-    html += `</div>`;
+    html+='</div>';
   }
 
-  // ── Applications ──
-  if (job.applications && job.applications.length > 0) {
-    html += `<div class="detail-section"><h3>Applications</h3>`;
-    job.applications.forEach(a => {
-      html += `<div style="font-size:13px;margin-bottom:6px">
-        <strong>${esc(a.method || 'Unknown')}</strong>
-        ${a.submitted_at ? ` · ${new Date(a.submitted_at).toLocaleDateString()}` : ''}
-        ${a.success !== null ? (a.success ? ' · ✅' : ' · ❌') : ''}
-        ${a.notes ? `<div style="color:var(--text2);font-size:12px">${esc(a.notes)}</div>` : ''}
-      </div>`;
-    });
-    html += `</div>`;
-  }
+  html+='<div class="detail-section"><h3>Notes</h3><textarea class="notes-area" id="notes-area" placeholder="Add notes...">'+esc(job.user_notes||'')+'</textarea></div>';
 
-  // ── Notes ──
-  html += `<div class="detail-section">
-    <h3>Notes</h3>
-    <textarea class="notes-area" id="notes-area" placeholder="Add notes...">${esc(job.user_notes || '')}</textarea>
-    <div style="margin-top:6px"><button class="btn btn-sm btn-outline" onclick="saveNotes(${job.id})">Save Notes</button></div>
-  </div>`;
-
-  // ── Description (collapsible) ──
-  if (job.description) {
-    html += `<div class="detail-section">
-      <h3 style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-        Job Description ▶
-      </h3>
-      <div style="display:none;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:300px;overflow-y:auto">${esc(job.description)}</div>
-    </div>`;
-  }
+  if(job.description) html+='<div class="detail-section"><h3 style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">Job Description &#9654;</h3><div style="display:none;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:300px;overflow-y:auto">'+esc(job.description)+'</div></div>';
 
   document.getElementById('panel-body').innerHTML = html;
 }
 
 // ── API actions ────────────────────────────────────────────
 async function updateStatus(jobId) {
-  const status = document.getElementById('status-select').value;
-  if (!status) return;
-  const interviewDate = document.getElementById('interview-date').value;
-  const body = {status};
-  if (interviewDate) body.interview_date = interviewDate;
+  var s=document.getElementById('status-select').value; if(!s)return;
+  var d=document.getElementById('interview-date').value;
+  var body={status:s}; if(d)body.interview_date=d;
+  var r=await fetch('/api/jobs/'+jobId+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.ok) location.reload();
+}
+async function saveNotes(jobId) {
+  await fetch('/api/jobs/'+jobId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({notes:document.getElementById('notes-area').value})});
+}
 
-  const resp = await fetch(`/api/jobs/${jobId}/status`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(body),
+async function runApplyPlan(jobId, btn) {
+  btn.disabled=true; btn.textContent='Generating plan...';
+  try {
+    var r = await fetch('/api/jobs/'+jobId+'/run-plan',{method:'POST'});
+    var d = await r.json();
+    if(d.ok) { location.reload(); }
+    else { btn.textContent=d.message||'Failed'; btn.disabled=false; }
+  } catch(e) { btn.textContent='Error'; btn.disabled=false; }
+}
+async function skipJob(jobId, btn) {
+  btn.disabled=true; btn.textContent='Skipping...';
+  await fetch('/api/jobs/'+jobId+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'rejected'})});
+  closeDetail();
+  location.reload();
+}
+
+async function sendSingleToReview(jobId, btn) {
+  btn.disabled = true; btn.textContent = 'Sending...';
+  await fetch('/api/jobs/send-to-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_ids:[jobId]})});
+  location.reload();
+}
+
+// ── Drag & drop ───────────────────────────────────────────
+var dragJobId = null;
+function dragStart(e) {
+  dragJobId = e.target.dataset.jobId;
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+async function dropCard(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragJobId) return;
+  await fetch('/api/jobs/'+dragJobId+'/status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({status: e.currentTarget.dataset.status})
   });
-  if (resp.ok) {
-    location.reload();
+  location.reload();
+}
+document.addEventListener('dragend', function(){ document.querySelectorAll('.dragging').forEach(function(el){el.classList.remove('dragging');}); dragJobId=null; });
+
+async function discardJob(jobId) {
+  await fetch('/api/jobs/'+jobId+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'rejected'})});
+  location.reload();
+}
+
+// ── Bottom section ────────────────────────────────────────
+function filterBottom() {
+  var q = document.getElementById('bottom-search').value.toLowerCase();
+  document.querySelectorAll('#bottom-tbody tr').forEach(function(tr){ tr.style.display = tr.dataset.search.indexOf(q)!==-1?'':'none'; });
+}
+var sortState = {score:0, date:0};
+function sortBottom(field) {
+  sortState[field] = sortState[field]===1 ? -1 : 1;
+  var tbody = document.getElementById('bottom-tbody');
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort(function(a,b){
+    var va,vb;
+    if(field==='score'){va=parseInt(a.dataset.score);vb=parseInt(b.dataset.score);}
+    else{va=a.dataset.date;vb=b.dataset.date;}
+    if(va<vb) return -1*sortState[field]; if(va>vb) return sortState[field]; return 0;
+  });
+  rows.forEach(function(r){tbody.appendChild(r);});
+  document.getElementById('sort-score').classList.toggle('active', field==='score');
+  document.getElementById('sort-date').classList.toggle('active', field==='date');
+}
+function toggleAllChecks(master) {
+  document.querySelectorAll('.job-check').forEach(function(cb){ if(cb.closest('tr').style.display!=='none') cb.checked=master.checked; });
+  updateSendBtn();
+}
+function updateSendBtn() {
+  var n = document.querySelectorAll('.job-check:checked').length;
+  var btn = document.getElementById('send-review-btn');
+  btn.disabled = n===0;
+  btn.textContent = n>0 ? 'Send ' + n + ' to Review' : 'Send Selected to Review';
+  var del = document.getElementById('delete-sel-btn');
+  del.disabled = n===0;
+  del.innerHTML = n>0 ? '&#128465; Delete ' + n + ' Selected' : '&#128465; Delete Selected';
+}
+async function sendToReview() {
+  var ids = Array.from(document.querySelectorAll('.job-check:checked')).map(function(cb){return parseInt(cb.dataset.jobId);});
+  if(!ids.length) return;
+  var btn = document.getElementById('send-review-btn');
+  btn.disabled=true; btn.textContent='Sending via Telegram...';
+  await fetch('/api/jobs/send-to-review',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_ids:ids})});
+  location.reload();
+}
+
+async function deleteSelected() {
+  var ids = Array.from(document.querySelectorAll('.job-check:checked')).map(function(cb){return parseInt(cb.dataset.jobId);});
+  if(!ids.length) return;
+  if(!confirm('Permanently delete ' + ids.length + ' job(s)? This cannot be undone.')) return;
+  var btn = document.getElementById('delete-sel-btn');
+  btn.disabled=true; btn.textContent='Deleting...';
+  for(var i=0;i<ids.length;i++){
+    await fetch('/api/jobs/'+ids[i],{method:'DELETE'});
+  }
+  location.reload();
+}
+
+async function permanentlyDeleteJob(jobId) {
+  if(!confirm('Permanently delete this job? This cannot be undone.')) return;
+  await fetch('/api/jobs/'+jobId,{method:'DELETE'});
+  closeDetail();
+  location.reload();
+}
+
+// ── Preferences Modal ─────────────────────────────────────
+var prefsStep = 0;
+var prefsData = {};
+
+var PREF_DIMENSIONS = [
+  {key:'skills_match', label:'Skills Match', dflt:70},
+  {key:'industry_match', label:'Industry Match', dflt:50},
+  {key:'seniority_fit', label:'Seniority Fit', dflt:60},
+  {key:'location_fit', label:'Location Fit', dflt:65},
+  {key:'compensation', label:'Compensation', dflt:40},
+  {key:'work_style', label:'Work Style', dflt:50}
+];
+
+var DOMAIN_OPTIONS = ['Healthcare','Fintech','AI / ML','SaaS','Gaming','E-commerce','EdTech','Cybersecurity','Logistics','Media','GovTech','Manufacturing','Construction','Consulting','Legal','Real Estate','Retail','Energy','Agriculture','Aerospace','Automotive','Biotech','Pharma','Hospitality','Insurance','Telecom','Non-Profit','Government'];
+
+function deepCopy(o) { return JSON.parse(JSON.stringify(o)); }
+
+function openPrefsModal() {
+  prefsStep = 0;
+  prefsData = deepCopy(SAVED_PREFS);
+  if(!prefsData.weights) {
+    prefsData.weights = {};
+    PREF_DIMENSIONS.forEach(function(d){prefsData.weights[d.key]=d.dflt;});
+  }
+  if(!prefsData.domains) prefsData.domains = [];
+  if(!prefsData.technologies) prefsData.technologies = [];
+  if(!prefsData.desired_titles) prefsData.desired_titles = [];
+  if(!prefsData.deal_breakers) prefsData.deal_breakers = [];
+  if(!prefsData.target_companies) prefsData.target_companies = [];
+  if(!prefsData.linkedin_connections) prefsData.linkedin_connections = [];
+  if(!prefsData.custom_domains) prefsData.custom_domains = [];
+  renderPrefsStep();
+  document.getElementById('prefs-modal').classList.add('open');
+}
+function closePrefsModal() { document.getElementById('prefs-modal').classList.remove('open'); }
+
+function renderPrefsStep() {
+  var body = document.getElementById('prefs-body');
+  var footer = document.getElementById('prefs-footer');
+  var title = document.getElementById('prefs-title');
+  var dots = '<div class="steps">';
+  for(var i=0;i<4;i++) dots += '<div class="step-dot '+(i===prefsStep?'active':'')+'"></div>';
+  dots += '</div>';
+
+  if (prefsStep === 0) {
+    title.textContent = 'Connect Your Accounts';
+    var liStatus = LINKEDIN_CONNECTED;
+    var tgStatus = TELEGRAM_CONNECTED;
+    var gmStatus = GMAIL_CONNECTED;
+    body.innerHTML = dots
+      + '<p style="font-size:13px;color:var(--text2);margin-bottom:16px">Connect your accounts to enable job scraping, notifications, and email.</p>'
+      // LinkedIn
+      + '<div class="connect-card">'
+      + '<div class="icon" style="background:#0a66c2"><svg viewBox="0 0 24 24" fill="#fff"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></div>'
+      + '<div class="info"><h4>LinkedIn</h4><p>' + (liStatus ? 'Session cookies found &#8212; connected' : 'Opens a browser window to log in') + '</p></div>'
+      + '<button class="connect-btn '+(liStatus?'connected':'linkedin')+'" id="li-btn" '+(liStatus?'disabled':'')+' onclick="connectLinkedIn(this)">'
+      + (liStatus ? '&#10003; Connected' : 'Connect LinkedIn') + '</button>'
+      + '</div>'
+      // Telegram
+      + '<div class="connect-card">'
+      + '<div class="icon" style="background:#229ED9"><svg viewBox="0 0 24 24" fill="#fff"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></div>'
+      + '<div class="info"><h4>Telegram Bot</h4><p>' + (tgStatus ? 'Bot connected &#8212; notifications active' : 'Enter your bot token and chat ID') + '</p></div>'
+      + '<button class="connect-btn '+(tgStatus?'connected':'telegram')+'" id="tg-btn" onclick="toggleTelegramSetup()">'
+      + (tgStatus ? '&#10003; Connected' : 'Setup Telegram') + '</button>'
+      + '</div>'
+      + '<div id="tg-setup" style="display:none;margin-top:8px">'
+      + '<div class="form-group"><label class="form-label">Bot Token</label><input class="form-input" id="tg-token" placeholder="123456:ABC-DEF..." value="'+esc(prefsData.telegram_bot_token||'')+'"></div>'
+      + '<div class="form-group"><label class="form-label">Chat ID</label><input class="form-input" id="tg-chatid" placeholder="Your chat ID" value="'+esc(prefsData.telegram_chat_id||'')+'"></div>'
+      + '<button class="btn" onclick="connectTelegram(this)">Test &amp; Save</button>'
+      + '<span id="tg-msg" style="margin-left:8px;font-size:12px"></span>'
+      + '</div>'
+      // Gmail
+      + '<div class="connect-card">'
+      + '<div class="icon" style="background:#ea4335"><svg viewBox="0 0 24 24" fill="#fff"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg></div>'
+      + '<div class="info"><h4>Gmail</h4><p>' + (gmStatus ? 'SMTP connected &#8212; ready to send' : 'App Password required (not regular password)') + '</p></div>'
+      + '<button class="connect-btn '+(gmStatus?'connected':'')+'" id="gm-btn" onclick="toggleGmailSetup()" style="'+(gmStatus?'':'background:#ea4335;color:#fff')+'">'
+      + (gmStatus ? '&#10003; Connected' : 'Setup Gmail') + '</button>'
+      + '</div>'
+      + '<div id="gm-setup" style="display:none;margin-top:8px">'
+      + '<div class="form-group"><label class="form-label">Gmail Address</label><input class="form-input" id="gm-address" type="email" placeholder="you@gmail.com" value="'+esc(prefsData.gmail_address||'')+'"></div>'
+      + '<div class="form-group"><label class="form-label">App Password</label><input class="form-input" id="gm-password" type="password" placeholder="xxxx xxxx xxxx xxxx" value="'+esc(prefsData.gmail_app_password||'')+'"></div>'
+      + '<div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.5;background:var(--bg);padding:8px 10px;border-radius:4px">'
+      + '<b>How to get an App Password:</b><br>'
+      + '1. Go to <a href="https://myaccount.google.com/security" target="_blank">Google Account &rarr; Security</a><br>'
+      + '2. Enable <b>2-Step Verification</b> first (required)<br>'
+      + '3. Then go to <a href="https://myaccount.google.com/apppasswords" target="_blank">App passwords</a><br>'
+      + '4. Create one for &quot;Mail&quot; and paste the 16-char code above'
+      + '</div>'
+      + '<button class="btn" onclick="connectGmail(this)">Test &amp; Save</button>'
+      + '<span id="gm-msg" style="margin-left:8px;font-size:12px"></span>'
+      + '</div>';
+    footer.innerHTML = '<button class="btn btn-outline" onclick="closePrefsModal()">Cancel</button><button class="btn" onclick="nextPrefsStep()">Next &#8594;</button>';
+
+  } else if (prefsStep === 1) {
+    title.textContent = 'Your CVs';
+    // Load CV files and display inline editors
+    var cvFilesJson = {{ cv_files | tojson }};
+    if (!prefsData._cvContents) prefsData._cvContents = {};
+    var cvHtml = dots
+      + '<p style="font-size:13px;color:var(--text2);margin-bottom:12px">Edit your source CVs below. These YAML files are used to tailor your CV for each job application.</p>';
+    if (cvFilesJson.length === 0) {
+      cvHtml += '<div style="padding:20px;text-align:center;color:var(--text2)">No source CV files found in <code>personal_assistant/cv/</code></div>';
+    } else {
+      cvFilesJson.forEach(function(cv, idx) {
+        cvHtml += '<div class="form-group" style="margin-bottom:12px">';
+        cvHtml += '<label class="form-label" style="display:flex;align-items:center;justify-content:space-between">';
+        cvHtml += '<span>'+esc(cv.name)+'</span>';
+        cvHtml += '<span style="font-weight:normal;text-transform:none;font-size:11px;color:var(--text2)">'+esc(cv.filename)+'</span>';
+        cvHtml += '</label>';
+        cvHtml += '<textarea id="cv-inline-'+idx+'" data-filename="'+esc(cv.filename)+'" spellcheck="false" style="width:100%;min-height:280px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:SFMono-Regular,Monaco,Menlo,monospace;font-size:12px;padding:10px;border-radius:var(--radius);resize:vertical;line-height:1.5">Loading...</textarea>';
+        cvHtml += '</div>';
+      });
+    }
+    body.innerHTML = cvHtml;
+    // Load each CV content
+    cvFilesJson.forEach(function(cv, idx) {
+      if (prefsData._cvContents[cv.filename]) {
+        document.getElementById('cv-inline-'+idx).value = prefsData._cvContents[cv.filename];
+      } else {
+        fetch('/api/cv-source/' + encodeURIComponent(cv.filename)).then(function(r){return r.json();}).then(function(d){
+          document.getElementById('cv-inline-'+idx).value = d.content || '# Error loading';
+          prefsData._cvContents[cv.filename] = d.content;
+        });
+      }
+    });
+    footer.innerHTML = '<button class="btn btn-outline" onclick="prefsStep=0;renderPrefsStep();">&#8592; Back</button><button class="btn" onclick="nextPrefsStep()">Next &#8594;</button>';
+
+  } else if (prefsStep === 2) {
+    title.textContent = 'Job Preferences';
+
+    // "Pre-fill from CV" banner (only if fields look empty)
+    var hasSomePrefs = (prefsData.technologies && prefsData.technologies.length > 0)
+                    || (prefsData.desired_titles && prefsData.desired_titles.length > 0);
+    var prefillBanner = '';
+    if (!hasSomePrefs) {
+      prefillBanner = '<div id="prefill-banner" style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">'
+        + '<span style="font-size:13px;color:var(--text2)">&#128196; We can pre-fill these fields from your CV</span>'
+        + '<button class="btn" onclick="prefillFromCv()" id="prefill-btn" style="font-size:12px;padding:6px 14px">Pre-fill from CV</button>'
+        + '</div>';
+    }
+
+    // Build domain checkboxes
+    var domArr = prefsData.domains || [];
+    var domHtml = '<div class="checkbox-grid">';
+    DOMAIN_OPTIONS.forEach(function(d){
+      var chk = domArr.indexOf(d)!==-1;
+      domHtml += '<label class="checkbox-item'+(chk?' checked':'')+'" onclick="toggleCheckbox(this)"><input type="checkbox" '+(chk?'checked':'')+' value="'+d+'"> '+d+'</label>';
+    });
+    domHtml += '</div>';
+
+    // Build tech tags
+    var techArr = prefsData.technologies || [];
+    var techTags = '';
+    techArr.forEach(function(t){ techTags += '<span class="tag">'+esc(t)+'<span class="remove" onclick="removeTag(this,\'techs\')">&times;</span></span>'; });
+
+    // Build desired job titles tags
+    var titlesArr = prefsData.desired_titles || [];
+    var titleTags = '';
+    titlesArr.forEach(function(t){ titleTags += '<span class="tag">'+esc(t)+'<span class="remove" onclick="removeTag(this,\'titles\')">&times;</span></span>'; });
+
+    // Build deal-breaker tags
+    var dbArr = prefsData.deal_breakers || [];
+    var dbTags = '';
+    dbArr.forEach(function(t){ dbTags += '<span class="tag" style="background:rgba(239,68,68,.15);color:#ef4444;border-color:rgba(239,68,68,.3)">'+esc(t)+'<span class="remove" onclick="removeTag(this,\'dbreakers\')">&times;</span></span>'; });
+
+    // Build custom domain tags (for domains not in the checkbox list)
+    var customDomArr = prefsData.custom_domains || [];
+    var customDomTags = '';
+    customDomArr.forEach(function(t){ customDomTags += '<span class="tag" style="background:rgba(168,85,247,.15);color:#a855f7;border-color:rgba(168,85,247,.3)">'+esc(t)+'<span class="remove" onclick="removeTag(this,\'customdoms\')">&times;</span></span>'; });
+
+    // Build target companies tags
+    var compArr = prefsData.target_companies || [];
+    var compTags = '';
+    compArr.forEach(function(t){ compTags += '<span class="tag" style="background:rgba(34,197,94,.12);color:#22c55e;border-color:rgba(34,197,94,.3)">'+esc(t)+'<span class="remove" onclick="removeTag(this,\'companies\')">&times;</span></span>'; });
+
+    // Build LinkedIn connections tags
+    var connArr = prefsData.linkedin_connections || [];
+    var connTags = '';
+    connArr.forEach(function(t){ connTags += '<span class="tag" style="background:rgba(10,102,194,.12);color:#0a66c2;border-color:rgba(10,102,194,.3)">'+esc(t)+'<span class="remove" onclick="removeTag(this,\'connections\')">&times;</span></span>'; });
+
+    body.innerHTML = dots
+      + prefillBanner
+      + '<div class="form-group"><label class="form-label">Industries / Domains <span style="font-weight:normal;text-transform:none">(select all that interest you)</span></label>' + domHtml
+      + '<div style="margin-top:8px"><label class="form-label" style="margin-bottom:4px">Other Domains <span style="font-weight:normal;text-transform:none">(type + Enter for domains not listed above)</span></label>'
+      + '<div class="tag-wrap" id="customdom-tags" onclick="this.querySelector(\'input\').focus()">' + customDomTags + '<input class="tag-input" id="customdom-input" placeholder="e.g. Marine Biology, Fashion, Mining..." onkeydown="addTag(event,\'customdoms\')"></div></div></div>'
+      + '<div class="form-group"><label class="form-label">Desired Job Titles <span style="font-weight:normal;text-transform:none">(also used as LinkedIn search keywords — type + Enter)</span></label>'
+      + '<div class="tag-wrap" id="title-tags" onclick="this.querySelector(\'input\').focus()">' + titleTags + '<input class="tag-input" id="title-input" placeholder="e.g. Full Stack Developer, Data Analyst, Nurse Practitioner..." onkeydown="addTag(event,\'titles\')"></div></div>'
+      + '<div class="form-group"><label class="form-label">Key Skills / Technologies <span style="font-weight:normal;text-transform:none">(type + Enter)</span></label>'
+      + '<div class="tag-wrap" id="tech-tags" onclick="this.querySelector(\'input\').focus()">' + techTags + '<input class="tag-input" id="tech-input" placeholder="e.g. Flutter, Python, Nursing, AutoCAD..." onkeydown="addTag(event,\'techs\')"></div></div>'
+      + '<div class="form-group"><label class="form-label">Deal-breaker Keywords <span style="font-weight:normal;text-transform:none">(jobs with these are penalized — type + Enter)</span></label>'
+      + '<div class="tag-wrap" id="db-tags" onclick="this.querySelector(\'input\').focus()">' + dbTags + '<input class="tag-input" id="db-input" placeholder="e.g. clearance required, PhD, COBOL..." onkeydown="addTag(event,\'dbreakers\')"></div></div>'
+      + '<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">'
+      + '<h3 style="font-size:14px;font-weight:600;margin-bottom:12px">&#128269; Search Sources</h3>'
+      + '<div class="form-group"><label class="form-label">Target Companies <span style="font-weight:normal;text-transform:none">(scrape job pages of specific companies — type + Enter)</span></label>'
+      + '<div class="tag-wrap" id="company-tags" onclick="this.querySelector(\'input\').focus()">' + compTags + '<input class="tag-input" id="company-input" placeholder="e.g. Google, Desjardins, Shopify..." onkeydown="addTag(event,\'companies\')"></div></div>'
+      + '<div class="form-group"><label class="form-label">LinkedIn Connections <span style="font-weight:normal;text-transform:none">(profile URLs — scrape jobs at their companies — type + Enter)</span></label>'
+      + '<div class="tag-wrap" id="conn-tags" onclick="this.querySelector(\'input\').focus()">' + connTags + '<input class="tag-input" id="conn-input" placeholder="e.g. linkedin.com/in/john-doe..." onkeydown="addTag(event,\'connections\')"></div></div>'
+      + '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;margin-bottom:16px"><input type="checkbox" id="pref-conn-filter"'+(prefsData.prefer_connection_companies?' checked':'')+' style="accent-color:var(--accent)"> <span>Also search with LinkedIn&#39;s &ldquo;In Your Network&rdquo; filter</span></label>'
+      + '<hr style="border:0;border-top:1px solid var(--border);margin:20px 0">'
+      + '<div class="form-row">'
+      + '<div class="form-group"><label class="form-label">Company Size</label><select class="form-select" id="pref-size">'
+      + '<option value="any"'+(prefsData.company_size==='any'||!prefsData.company_size?' selected':'')+'>Any</option>'
+      + '<option value="startup"'+(prefsData.company_size==='startup'?' selected':'')+'>Startup (&lt;50)</option>'
+      + '<option value="pme"'+(prefsData.company_size==='pme'?' selected':'')+'>PME / SMB (50-500)</option>'
+      + '<option value="enterprise"'+(prefsData.company_size==='enterprise'?' selected':'')+'>Enterprise (500+)</option>'
+      + '</select></div>'
+      + '<div class="form-group"><label class="form-label">Work Mode</label><select class="form-select" id="pref-remote">'
+      + '<option value="remote"'+(prefsData.work_mode==='remote'?' selected':'')+'>Remote</option>'
+      + '<option value="hybrid"'+(prefsData.work_mode==='hybrid'?' selected':'')+'>Hybrid</option>'
+      + '<option value="onsite"'+(prefsData.work_mode==='onsite'?' selected':'')+'>On-site</option>'
+      + '<option value="any"'+(!prefsData.work_mode||prefsData.work_mode==='any'?' selected':'')+'>Any</option>'
+      + '</select></div>'
+      + '</div>'
+      + '<div class="form-row">'
+      + '<div class="form-group"><label class="form-label">Job Type</label><select class="form-select" id="pref-type">'
+      + '<option value="full_time"'+(prefsData.job_type==='full_time'||!prefsData.job_type?' selected':'')+'>Full Time</option>'
+      + '<option value="contract"'+(prefsData.job_type==='contract'?' selected':'')+'>Contract</option>'
+      + '<option value="freelance"'+(prefsData.job_type==='freelance'?' selected':'')+'>Freelance</option>'
+      + '<option value="any"'+(prefsData.job_type==='any'?' selected':'')+'>Any</option>'
+      + '</select></div>'
+      + '<div class="form-group"><label class="form-label">Language Preference</label><select class="form-select" id="pref-lang">'
+      + '<option value="any"'+(!prefsData.language||prefsData.language==='any'?' selected':'')+'>Any</option>'
+      + '<option value="english"'+(prefsData.language==='english'?' selected':'')+'>English</option>'
+      + '<option value="french"'+(prefsData.language==='french'?' selected':'')+'>French</option>'
+      + '<option value="bilingual"'+(prefsData.language==='bilingual'?' selected':'')+'>Bilingual</option>'
+      + '</select></div>'
+      + '</div>'
+      + '<div class="form-row">'
+      + '<div class="form-group"><label class="form-label">Home City <span style="font-weight:normal;text-transform:none">(non-remote jobs outside penalized)</span></label><input class="form-input" id="pref-city" value="'+(prefsData.home_city||'Montreal')+'" placeholder="Montreal"></div>'
+      + '<div class="form-group"><label class="form-label">Max Experience Required</label><select class="form-select" id="pref-max-exp">'
+      + '<option value="2"'+(prefsData.max_experience_years==2?' selected':'')+'>2 years (junior)</option>'
+      + '<option value="3"'+(!prefsData.max_experience_years||prefsData.max_experience_years==3?' selected':'')+'>3 years</option>'
+      + '<option value="5"'+(prefsData.max_experience_years==5?' selected':'')+'>5 years (mid)</option>'
+      + '<option value="7"'+(prefsData.max_experience_years==7?' selected':'')+'>7 years</option>'
+      + '<option value="10"'+(prefsData.max_experience_years==10?' selected':'')+'>10+ years (senior)</option>'
+      + '</select></div>'
+      + '</div>'
+      + '<div class="form-row">'
+      + '<div class="form-group"><label class="form-label">Min. Salary (CAD)</label><input class="form-input" id="pref-salary" type="number" value="'+(prefsData.salary||80000)+'" step="5000"></div>'
+      + '<div class="form-group"><label class="form-label">Years of Experience</label><input class="form-input" id="pref-yoe" type="number" value="'+(prefsData.years_experience||3)+'" min="0" max="30"></div>'
+      + '</div>'
+      + '<div class="form-group"><label class="form-label">Extra Notes / Job Preferences <span style="font-weight:normal;text-transform:none">(anything specific the AI should know)</span></label>'
+      + '<textarea class="form-input" id="pref-comments" placeholder="e.g. I prefer startups with a strong engineering culture, avoid consulting firms, interested in health-tech..." style="min-height:80px;resize:vertical;font-family:inherit;font-size:13px">'+(esc(prefsData.extra_comments||''))+'</textarea></div>';
+    footer.innerHTML = '<button class="btn btn-outline" onclick="prefsStep=1;renderPrefsStep();">&#8592; Back</button><button class="btn" onclick="nextPrefsStep()">Next &#8594;</button>';
+
+  } else if (prefsStep === 3) {
+    title.textContent = 'Scoring Weights';
+    // Build weight labels
+    var w = prefsData.weights || {};
+    var labelsHtml = '<div class="weight-labels">';
+    PREF_DIMENSIONS.forEach(function(d) {
+      var val = w[d.key] || d.dflt;
+      labelsHtml += '<div class="weight-chip"><span>'+d.label+'</span> <span class="val" id="wv-'+d.key+'">'+val+'</span></div>';
+    });
+    labelsHtml += '</div>';
+
+    body.innerHTML = dots
+      + '<p style="font-size:13px;color:var(--text2);margin-bottom:8px">Drag the points to tell the scorer what matters most to you. Higher = stricter filtering on that dimension.</p>'
+      + '<div class="radar-container"><canvas id="radar-canvas" width="380" height="380"></canvas></div>'
+      + labelsHtml;
+    footer.innerHTML = '<button class="btn btn-outline" onclick="prefsStep=2;renderPrefsStep();">&#8592; Back</button><button class="btn" onclick="savePrefs()" style="background:var(--green)">&#10003; Save Preferences</button>';
+    setTimeout(function(){ drawRadar(); initRadarDrag(); }, 50);
   }
 }
 
-async function saveNotes(jobId) {
-  const notes = document.getElementById('notes-area').value;
-  await fetch(`/api/jobs/${jobId}/notes`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({notes}),
-  });
-  const btn = document.querySelector('#notes-area + div .btn');
-  btn.textContent = '✓ Saved';
-  setTimeout(() => btn.textContent = 'Save Notes', 1500);
+// ── Step 0 helpers: connect accounts ──────────────────────
+function toggleTelegramSetup() {
+  var el = document.getElementById('tg-setup');
+  el.style.display = el.style.display==='none'?'block':'none';
+}
+function toggleGmailSetup() {
+  var el = document.getElementById('gm-setup');
+  el.style.display = el.style.display==='none'?'block':'none';
+}
+async function connectLinkedIn(btn) {
+  btn.disabled=true; btn.textContent='Opening browser...';
+  try {
+    var r = await fetch('/api/connect/linkedin',{method:'POST'});
+    var d = await r.json();
+    if(d.ok) { btn.className='connect-btn connected'; btn.textContent='&#10003; Connected'; LINKEDIN_CONNECTED=true; }
+    else { btn.textContent=d.message||'Failed'; btn.disabled=false; }
+  } catch(e) { btn.textContent='Error'; btn.disabled=false; }
+}
+async function connectTelegram(btn) {
+  btn.disabled=true; btn.textContent='Testing...';
+  var token=document.getElementById('tg-token').value.trim();
+  var chatid=document.getElementById('tg-chatid').value.trim();
+  var msg=document.getElementById('tg-msg');
+  try {
+    var r = await fetch('/api/connect/telegram',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bot_token:token,chat_id:chatid})});
+    var d = await r.json();
+    if(d.ok) {
+      msg.style.color='var(--green)'; msg.textContent='&#10003; '+d.message;
+      document.getElementById('tg-btn').className='connect-btn connected';
+      document.getElementById('tg-btn').innerHTML='&#10003; Connected';
+      TELEGRAM_CONNECTED=true;
+      prefsData.telegram_bot_token=token;
+      prefsData.telegram_chat_id=chatid;
+    } else { msg.style.color='var(--red)'; msg.textContent=d.message; }
+  } catch(e) { msg.style.color='var(--red)'; msg.textContent='Connection error'; }
+  btn.disabled=false; btn.textContent='Test & Save';
+}
+async function connectGmail(btn) {
+  btn.disabled=true; btn.textContent='Testing SMTP...';
+  var address=document.getElementById('gm-address').value.trim();
+  var password=document.getElementById('gm-password').value.trim();
+  var msg=document.getElementById('gm-msg');
+  try {
+    var r = await fetch('/api/connect/gmail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:address,app_password:password})});
+    var d = await r.json();
+    if(d.ok) {
+      msg.style.color='var(--green)'; msg.textContent=d.message;
+      document.getElementById('gm-btn').className='connect-btn connected';
+      document.getElementById('gm-btn').innerHTML='&#10003; Connected';
+      GMAIL_CONNECTED=true;
+      prefsData.gmail_address=address;
+      prefsData.gmail_app_password=password;
+    } else { msg.style.color='var(--red)'; msg.textContent=d.message; }
+  } catch(e) { msg.style.color='var(--red)'; msg.textContent='Connection error'; }
+  btn.disabled=false; btn.textContent='Test & Save';
 }
 
-// Keyboard shortcut: Escape to close panel
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+// ── Step 1 helpers: CV inline editors ─────────────────────
+function collectStep1Cvs() {
+  var cvFilesJson = {{ cv_files | tojson }};
+  cvFilesJson.forEach(function(cv, idx) {
+    var el = document.getElementById('cv-inline-'+idx);
+    if (el) prefsData._cvContents[cv.filename] = el.value;
+  });
+}
+async function saveCvSources() {
+  var cvFilesJson = {{ cv_files | tojson }};
+  for (var i=0; i<cvFilesJson.length; i++) {
+    var content = prefsData._cvContents[cvFilesJson[i].filename];
+    if (content) {
+      await fetch('/api/cv-source/' + encodeURIComponent(cvFilesJson[i].filename), {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({content: content})
+      });
+    }
+  }
+}
+
+// ── Step 2 helpers: tags + checkboxes ─────────────────────
+function toggleCheckbox(label) {
+  var cb = label.querySelector('input');
+  // Let the checkbox toggle naturally, then update style
+  setTimeout(function(){ label.classList.toggle('checked', cb.checked); }, 0);
+}
+function addTag(e, id) {
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  var val = e.target.value.trim();
+  if(!val) return;
+  e.target.value = '';
+  var wrap = e.target.parentNode;
+  var span = document.createElement('span');
+  span.className='tag';
+  if(id==='dbreakers') span.style.cssText='background:rgba(239,68,68,.15);color:#ef4444;border-color:rgba(239,68,68,.3)';
+  else if(id==='customdoms') span.style.cssText='background:rgba(168,85,247,.15);color:#a855f7;border-color:rgba(168,85,247,.3)';
+  else if(id==='companies') span.style.cssText='background:rgba(34,197,94,.12);color:#22c55e;border-color:rgba(34,197,94,.3)';
+  else if(id==='connections') span.style.cssText='background:rgba(10,102,194,.12);color:#0a66c2;border-color:rgba(10,102,194,.3)';
+  span.innerHTML=esc(val)+'<span class="remove" onclick="removeTag(this,\''+id+'\')">&times;</span>';
+  wrap.insertBefore(span, e.target);
+}
+function removeTag(el) { el.parentNode.remove(); }
+
+async function prefillFromCv() {
+  var btn = document.getElementById('prefill-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Reading CV...'; }
+  try {
+    var r = await fetch('/api/cv-extract-prefs');
+    var d = await r.json();
+    if (d.error) { if (btn) btn.textContent = d.error; return; }
+
+    // Merge extracted data into prefsData (don't overwrite if already filled)
+    if (d.desired_titles && d.desired_titles.length && (!prefsData.desired_titles || !prefsData.desired_titles.length)) {
+      prefsData.desired_titles = d.desired_titles;
+    }
+    if (d.technologies && d.technologies.length && (!prefsData.technologies || !prefsData.technologies.length)) {
+      prefsData.technologies = d.technologies;
+    }
+    if (d.domains && d.domains.length) {
+      // Merge with existing, don't duplicate
+      var existing = new Set(prefsData.domains || []);
+      d.domains.forEach(function(dom) { existing.add(dom); });
+      prefsData.domains = Array.from(existing);
+    }
+    if (d.home_city && !prefsData.home_city) {
+      prefsData.home_city = d.home_city;
+    }
+    // Re-render the step with the new data
+    renderPrefsStep();
+  } catch(e) {
+    if (btn) btn.textContent = 'Error';
+  }
+}
+
+function collectStep2() {
+  // Domains from checkboxes
+  var doms = [];
+  document.querySelectorAll('.checkbox-item input:checked').forEach(function(cb){ doms.push(cb.value); });
+  prefsData.domains = doms;
+  // Technologies from tags
+  var techs = [];
+  document.querySelectorAll('#tech-tags .tag').forEach(function(t){
+    var txt = t.childNodes[0].textContent.trim();
+    if(txt) techs.push(txt);
+  });
+  prefsData.technologies = techs;
+  // Desired job titles from tags
+  var titles = [];
+  document.querySelectorAll('#title-tags .tag').forEach(function(t){
+    var txt = t.childNodes[0].textContent.trim();
+    if(txt) titles.push(txt);
+  });
+  prefsData.desired_titles = titles;
+  // Deal-breaker keywords from tags
+  var dbreakers = [];
+  document.querySelectorAll('#db-tags .tag').forEach(function(t){
+    var txt = t.childNodes[0].textContent.trim();
+    if(txt) dbreakers.push(txt);
+  });
+  prefsData.deal_breakers = dbreakers;
+  // Custom domains from tags
+  var customDoms = [];
+  document.querySelectorAll('#customdom-tags .tag').forEach(function(t){
+    var txt = t.childNodes[0].textContent.trim();
+    if(txt) customDoms.push(txt);
+  });
+  prefsData.custom_domains = customDoms;
+  // Target companies from tags
+  var companies = [];
+  document.querySelectorAll('#company-tags .tag').forEach(function(t){
+    var txt = t.childNodes[0].textContent.trim();
+    if(txt) companies.push(txt);
+  });
+  prefsData.target_companies = companies;
+  // LinkedIn connections from tags
+  var conns = [];
+  document.querySelectorAll('#conn-tags .tag').forEach(function(t){
+    var txt = t.childNodes[0].textContent.trim();
+    if(txt) conns.push(txt);
+  });
+  prefsData.linkedin_connections = conns;
+  prefsData.prefer_connection_companies = document.getElementById('pref-conn-filter').checked;
+  prefsData.company_size = document.getElementById('pref-size').value;
+  prefsData.work_mode = document.getElementById('pref-remote').value;
+  prefsData.job_type = document.getElementById('pref-type').value;
+  prefsData.language = document.getElementById('pref-lang').value;
+  prefsData.salary = parseInt(document.getElementById('pref-salary').value) || 80000;
+  prefsData.years_experience = parseInt(document.getElementById('pref-yoe').value) || 3;
+  prefsData.home_city = document.getElementById('pref-city').value.trim() || 'Montreal';
+  prefsData.max_experience_years = parseInt(document.getElementById('pref-max-exp').value) || 3;
+  prefsData.extra_comments = document.getElementById('pref-comments').value.trim();
+}
+
+function nextPrefsStep() {
+  if (prefsStep === 1) { collectStep1Cvs(); }
+  if (prefsStep === 2) { collectStep2(); }
+  prefsStep++;
+  renderPrefsStep();
+}
+
+// ── Radar chart with draggable points ─────────────────────
+var radarCanvas, radarCtx, radarCx, radarCy, radarR;
+var draggingPoint = -1;
+
+function getRadarPoint(dimIndex) {
+  var w = prefsData.weights || {};
+  var d = PREF_DIMENSIONS[dimIndex];
+  var val = (w[d.key] || d.dflt) / 100;
+  var angle = (Math.PI * 2 * dimIndex / PREF_DIMENSIONS.length) - Math.PI/2;
+  return { x: radarCx + radarR * val * Math.cos(angle), y: radarCy + radarR * val * Math.sin(angle) };
+}
+
+function drawRadar() {
+  radarCanvas = document.getElementById('radar-canvas');
+  if (!radarCanvas) return;
+  radarCtx = radarCanvas.getContext('2d');
+  var w = radarCanvas.width, h = radarCanvas.height;
+  radarCx = w/2; radarCy = h/2; radarR = Math.min(radarCx,radarCy) - 50;
+  var n = PREF_DIMENSIONS.length;
+  radarCtx.clearRect(0,0,w,h);
+
+  // Grid
+  for (var ring=1; ring<=4; ring++) {
+    radarCtx.beginPath();
+    var rr = radarR*ring/4;
+    for (var i=0;i<=n;i++){
+      var angle = (Math.PI*2*i/n)-Math.PI/2;
+      var x=radarCx+rr*Math.cos(angle), y=radarCy+rr*Math.sin(angle);
+      i===0?radarCtx.moveTo(x,y):radarCtx.lineTo(x,y);
+    }
+    radarCtx.strokeStyle='#2e3345'; radarCtx.lineWidth=1; radarCtx.stroke();
+  }
+  // Axes + labels
+  PREF_DIMENSIONS.forEach(function(d,i){
+    var angle=(Math.PI*2*i/n)-Math.PI/2;
+    radarCtx.beginPath(); radarCtx.moveTo(radarCx,radarCy);
+    radarCtx.lineTo(radarCx+radarR*Math.cos(angle),radarCy+radarR*Math.sin(angle));
+    radarCtx.strokeStyle='#2e3345'; radarCtx.stroke();
+    var lx=radarCx+(radarR+28)*Math.cos(angle), ly=radarCy+(radarR+28)*Math.sin(angle);
+    radarCtx.fillStyle='#8b90a0'; radarCtx.font='12px system-ui';
+    radarCtx.textAlign=Math.abs(angle+Math.PI/2)<0.1?'center':Math.abs(angle-Math.PI/2)<0.1?'center':angle>-Math.PI/2&&angle<Math.PI/2?'left':'right';
+    radarCtx.textBaseline='middle';
+    radarCtx.fillText(d.label,lx,ly);
+  });
+  // Polygon
+  var weights=prefsData.weights||{};
+  radarCtx.beginPath();
+  PREF_DIMENSIONS.forEach(function(d,i){
+    var val=(weights[d.key]||d.dflt)/100;
+    var angle=(Math.PI*2*i/n)-Math.PI/2;
+    var x=radarCx+radarR*val*Math.cos(angle), y=radarCy+radarR*val*Math.sin(angle);
+    i===0?radarCtx.moveTo(x,y):radarCtx.lineTo(x,y);
+  });
+  radarCtx.closePath();
+  radarCtx.fillStyle='rgba(59,130,246,.12)'; radarCtx.fill();
+  radarCtx.strokeStyle='#3b82f6'; radarCtx.lineWidth=2; radarCtx.stroke();
+  // Points (larger for dragging)
+  PREF_DIMENSIONS.forEach(function(d,i){
+    var pt=getRadarPoint(i);
+    radarCtx.beginPath(); radarCtx.arc(pt.x,pt.y,7,0,Math.PI*2);
+    radarCtx.fillStyle='#3b82f6'; radarCtx.fill();
+    radarCtx.strokeStyle='#1a1d27'; radarCtx.lineWidth=2; radarCtx.stroke();
+  });
+}
+
+function initRadarDrag() {
+  var canvas = document.getElementById('radar-canvas');
+  if(!canvas) return;
+
+  canvas.addEventListener('mousedown', function(e){
+    var rect=canvas.getBoundingClientRect();
+    var mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    // Find closest point
+    for(var i=0;i<PREF_DIMENSIONS.length;i++){
+      var pt=getRadarPoint(i);
+      var dx=mx-pt.x, dy=my-pt.y;
+      if(dx*dx+dy*dy < 225) { draggingPoint=i; canvas.style.cursor='grabbing'; return; }
+    }
+  });
+
+  canvas.addEventListener('mousemove', function(e){
+    var rect=canvas.getBoundingClientRect();
+    var mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    if(draggingPoint===-1) {
+      // Hover cursor
+      var hovering=false;
+      for(var i=0;i<PREF_DIMENSIONS.length;i++){
+        var pt=getRadarPoint(i);
+        var dx=mx-pt.x, dy=my-pt.y;
+        if(dx*dx+dy*dy<225){hovering=true;break;}
+      }
+      canvas.style.cursor=hovering?'grab':'default';
+      return;
+    }
+    // Calculate value from distance to center
+    var dx2=mx-radarCx, dy2=my-radarCy;
+    var dist=Math.sqrt(dx2*dx2+dy2*dy2);
+    var val=Math.round(Math.max(0,Math.min(100, (dist/radarR)*100)));
+    var d=PREF_DIMENSIONS[draggingPoint];
+    if(!prefsData.weights) prefsData.weights={};
+    prefsData.weights[d.key]=val;
+    var chip=document.getElementById('wv-'+d.key);
+    if(chip) chip.textContent=val;
+    drawRadar();
+  });
+
+  canvas.addEventListener('mouseup', function(){ draggingPoint=-1; canvas.style.cursor='default'; });
+  canvas.addEventListener('mouseleave', function(){ draggingPoint=-1; canvas.style.cursor='default'; });
+
+  // Touch support
+  canvas.addEventListener('touchstart', function(e){
+    e.preventDefault();
+    var rect=canvas.getBoundingClientRect();
+    var t=e.touches[0];
+    var mx=t.clientX-rect.left, my=t.clientY-rect.top;
+    for(var i=0;i<PREF_DIMENSIONS.length;i++){
+      var pt=getRadarPoint(i);
+      var dx=mx-pt.x, dy=my-pt.y;
+      if(dx*dx+dy*dy<400){draggingPoint=i;return;}
+    }
+  }, {passive:false});
+  canvas.addEventListener('touchmove', function(e){
+    if(draggingPoint===-1) return;
+    e.preventDefault();
+    var rect=canvas.getBoundingClientRect();
+    var t=e.touches[0];
+    var mx=t.clientX-rect.left, my=t.clientY-rect.top;
+    var dx2=mx-radarCx, dy2=my-radarCy;
+    var dist=Math.sqrt(dx2*dx2+dy2*dy2);
+    var val=Math.round(Math.max(0,Math.min(100,(dist/radarR)*100)));
+    var d=PREF_DIMENSIONS[draggingPoint];
+    if(!prefsData.weights) prefsData.weights={};
+    prefsData.weights[d.key]=val;
+    var chip=document.getElementById('wv-'+d.key);
+    if(chip) chip.textContent=val;
+    drawRadar();
+  }, {passive:false});
+  canvas.addEventListener('touchend', function(){ draggingPoint=-1; });
+}
+
+async function savePrefs() {
+  // Save CV sources first
+  await saveCvSources();
+  // Remove internal cv contents from prefs payload
+  var payload = deepCopy(prefsData);
+  delete payload._cvContents;
+  await fetch('/api/preferences',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  closePrefsModal();
+  location.reload();
+}
+
+// ── Auto-open modal only if not connected ─────────────────
+if (!LINKEDIN_CONNECTED || !TELEGRAM_CONNECTED || !GMAIL_CONNECTED) { setTimeout(openPrefsModal, 500); }
+
+document.addEventListener('keydown', function(e) { if(e.key==='Escape'){closeDetail();closePrefsModal();} });
 </script>
 </body>
 </html>

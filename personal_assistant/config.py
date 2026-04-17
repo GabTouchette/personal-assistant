@@ -36,7 +36,9 @@ class Settings(BaseSettings):
         default=["Software Engineer", "Backend Engineer", "Full Stack Engineer"]
     )
     job_locations: list[str] = Field(default=["Montreal", "Remote"])
+    home_city: str = "Montreal"  # Non-remote jobs outside this city get penalized
     min_salary: int = 80_000
+    max_experience_years: int = 3  # Penalize jobs requiring more than this
     relevance_threshold: int = 60
     priority_industries: list[str] = Field(default=["medical", "health", "healthcare", "biotech"])
 

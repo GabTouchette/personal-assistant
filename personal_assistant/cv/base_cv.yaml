@@ -34,22 +34,46 @@ experience:
     location: ""
     dates: "2022 – 2024"
     bullets:
-      - "Built internal tools and client-facing applications using Vue.js and Django"
-      - "Developed inventory management systems for dealership platforms"
-      - "Collaborated with cross-functional teams to deliver scalable web solutions"
+      - "Built internal tools and client-facing applications using Vue.js and Django for a company specializing in websites for recreational vehicle dealerships"
+      - "Developed efficient inventory management solutions for dealership platforms, contributing to smooth operation of online storefronts"
+      - "Collaborated with cross-functional teams (developers, designers, finance) to deliver scalable web solutions"
 
-  - title: "Web Developer Intern"
+  - title: "Web Developer (Intern)"
     company: "Sports AI"
     location: ""
-    dates: "2022 – 2022"
+    dates: "Summer 2022"
     bullets:
-      - "Built a React web application from scratch under tight deadlines"
-      - "Delivered production-ready application for company launch"
+      - "Built a React.js web application from scratch during a 4-month internship"
+      - "Met tight deadlines to complete the application before the company's official launch, presented live to a large audience"
+      - "Thrived in a fast-paced, high-pressure environment, demonstrating adaptability to deliver a quality product"
+
+  - title: "Web Developer (Intern)"
+    company: "CellCarta (formerly Caprion-Histogenex)"
+    location: ""
+    dates: "2021"
+    bullets:
+      - "Built an internal onboarding site allowing new employees to create a personalized logo appearing on promotional material"
+      - "Provided an easy-to-use interface for the company to access employee information and manage new-hire data across acquisitions"
+
+  - title: "Web Developer (Intern)"
+    company: "Magnus Chemicals Ltd."
+    location: ""
+    dates: "2021"
+    bullets:
+      - "Developed an interactive website to attract more clients and minimize customer-service interactions"
+      - "Collaborated with developers, graphic designers, and finance/marketing specialists to produce a polished, user-friendly product"
 
 education:
   - degree: "B.Eng. Software Engineering"
     institution: "Polytechnique Montréal"
     dates: "2020 – 2025"
+    details:
+      - "GPA: 3.33/4"
+      - "Student exchange at Queensland University of Technology (QUT), Brisbane, Australia — selected among 4 students from a competitive cohort for a 6-month program"
+
+  - degree: "DEC in Computer Science and Mathematics"
+    institution: "Champlain College"
+    dates: "2020 – 2021"
     details: []
 
 projects:
@@ -64,6 +88,29 @@ projects:
       - "Meal planning, calorie estimation, and grocery list automation in progress"
       - "Deployed on TestFlight and Heroku"
 
+  - name: "Multiplayer Spot-the-Difference Game"
+    url: ""
+    dates: "2023"
+    bullets:
+      - "Developed a multiplayer game where players find differences between two images"
+      - "Built with Angular, Electron, MongoDB, Node.js, Flutter, and Dart"
+      - "Team of 6 — responsible for planning, coordination, and delivering each module on schedule"
+
+  - name: "Online Scrabble Game"
+    url: ""
+    dates: "2022"
+    bullets:
+      - "Built an online Scrabble game where users can play against other players or a virtual player with multiple difficulty levels"
+      - "Used Angular, MongoDB, Node.js, Express, and Socket.io for real-time client-server communication"
+      - "Coordinated with a team of 6, managing organization and planning throughout the project lifecycle"
+
+  - name: "Autonomous Obstacle-Avoidance Robot"
+    url: ""
+    dates: "2021"
+    bullets:
+      - "Built a mini autonomous robot equipped with distance sensors for obstacle avoidance"
+      - "Designed an algorithm to process sensor data and determine the optimal maneuver to avoid obstacles"
+
 # Section labels — used by the HTML template (do not remove)
 labels:
   experience: "Experience"
@@ -73,16 +120,18 @@ labels:
 
 skills:
   - category: "Languages"
-    technologies: ["Python", "TypeScript", "JavaScript", "Java", "C++", "HTML", "CSS"]
+    technologies: ["Python", "TypeScript", "JavaScript", "Java", "C++", "HTML", "CSS", "SCSS"]
   - category: "Frameworks & Libraries"
-    technologies: ["Flutter", "React", "Vue.js", "Angular", "Django", "Node.js", "FastAPI"]
+    technologies: ["Flutter", "React", "Vue.js", "Angular", "Django", "Node.js", "FastAPI", "Express", "Socket.io"]
   - category: "Databases"
-    technologies: ["PostgreSQL", "SQLite", "Redis"]
+    technologies: ["PostgreSQL", "SQLite", "MongoDB", "Redis"]
   - category: "Cloud & DevOps"
-    technologies: ["Azure", "Docker", "Kubernetes (AKS)", "Terraform", "ArgoCD", "CI/CD pipelines"]
+    technologies: ["Azure", "Docker", "Kubernetes (AKS)", "Terraform", "ArgoCD", "CI/CD pipelines", "Heroku"]
   - category: "Practices"
-    technologies: ["System design", "REST APIs", "Distributed systems", "Microservices", "Agile / Scrum", "Code review"]
+    technologies: ["System design", "REST APIs", "Distributed systems", "Microservices", "Agile / Scrum", "Code review", "WebSockets"]
   - category: "Domain Expertise"
     technologies: ["Healthcare systems", "Medical imaging (FHIR / PACS)", "HIPAA / GDPR / PIPEDA compliance"]
+  - category: "Tools"
+    technologies: ["Git", "GitHub", "GitLab", "BitBucket", "Jira", "YouTrack", "Electron"]
   - category: "Spoken Languages"
     technologies: ["French (native)", "English (fluent)"]

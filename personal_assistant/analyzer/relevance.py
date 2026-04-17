@@ -32,20 +32,85 @@ DESCRIPTION_LIMIT = 2000
 
 client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
-BATCH_SYSTEM_PROMPT = """\
-You are a job relevance scorer for a software engineering candidate.
+_PREFS_PATH = __import__("pathlib").Path(settings.output_dir) / "user_preferences.json"
+
+
+def _build_system_prompt() -> str:
+    """Build the LLM scoring system prompt dynamically from user preferences."""
+    prefs = {}
+    if _PREFS_PATH.exists():
+        try:
+            prefs = json.loads(_PREFS_PATH.read_text())
+        except Exception:
+            pass
+
+    # Extract preference values with sensible defaults
+    techs = prefs.get("technologies", [])
+    domains = prefs.get("domains", [])
+    titles = prefs.get("desired_titles", [])
+    deal_breakers = prefs.get("deal_breakers", [])
+    home_city = prefs.get("home_city", settings.home_city)
+    work_mode = prefs.get("work_mode", "any")
+    max_exp = prefs.get("max_experience_years", settings.max_experience_years)
+    yoe = prefs.get("years_experience", 3)
+    salary = prefs.get("salary", settings.min_salary)
+    extra = prefs.get("extra_comments", "")
+    radar = prefs.get("weights", {})
+
+    # Build candidate profile section
+    profile_parts = []
+    if techs:
+        profile_parts.append(f"- Key skills/technologies: {', '.join(techs)}")
+    if titles:
+        profile_parts.append(f"- Looking for roles such as: {', '.join(titles)}")
+    if domains:
+        profile_parts.append(f"- Preferred industries: {', '.join(domains)}")
+    profile_parts.append(f"- Experience: ~{yoe} year(s) of professional experience")
+    profile_parts.append(f"- Location: {home_city} — {'remote preferred' if work_mode == 'remote' else 'open to ' + work_mode if work_mode != 'any' else 'flexible on work mode'}")
+    if salary:
+        profile_parts.append(f"- Minimum salary: ${salary:,} CAD")
+    if extra:
+        profile_parts.append(f"- Additional context: {extra}")
+    profile_block = "\n".join(profile_parts)
+
+    # Build constraints section from radar weights (higher = stricter)
+    constraints = []
+    if int(max_exp) <= 5:
+        constraints.append(f"- Jobs requiring more than {max_exp} years experience: cap at 40.")
+    constraints.append(f"- Jobs titled Senior/Staff/Principal if candidate has ~{yoe} years: cap at 35 unless description shows it's flexible.")
+    if work_mode == "remote":
+        constraints.append(f"- Non-remote jobs outside {home_city}: cap at 20.")
+    elif work_mode != "any":
+        constraints.append(f"- Jobs in cities other than {home_city} that don't match '{work_mode}' mode: cap at 20.")
+    else:
+        constraints.append(f"- Non-remote jobs outside {home_city}: penalize but don't cap below 40.")
+    if deal_breakers:
+        constraints.append(f"- Deal-breaker keywords (auto-reject if central to the role): {', '.join(deal_breakers)}")
+    constraints_block = "\n".join(constraints)
+
+    # Build scoring guide based on radar priorities
+    skills_w = radar.get("skills_match", 50)
+    industry_w = radar.get("industry_match", 50)
+    location_w = radar.get("location_fit", 65)
+
+    return f"""\
+You are a job relevance scorer for a candidate searching for jobs.
 
 Candidate profile (be strict — score high only on genuine fit):
-- Lead SWE / Full-stack: Flutter, Python, TypeScript, JS, Vue, React, Django, Java
-- Cloud/infra: Azure, Docker, Kubernetes, Terraform, ArgoCD
-- Domain: Healthcare/medical (FHIR, PACS, HIPAA/GDPR/PIPEDA) — bonus points for health-tech
-- Location: Montreal or Remote; min salary $80k CAD
-- Experience: Lead SWE at medical device startup, 2 yrs full-stack, intern
+{profile_block}
 
-Score 80-100: strong tech match + health-tech or senior role.
-Score 60-79: decent tech overlap, non-medical industry.
-Score 40-59: partial match, worth knowing about.
-Score 0-39: poor fit (wrong stack, too junior, wrong location).
+CONSTRAINTS — apply strictly:
+{constraints_block}
+
+Scoring priorities (from the candidate's preferences):
+- Skills/tech match importance: {skills_w}/100
+- Industry/domain match importance: {industry_w}/100
+- Location match importance: {location_w}/100
+
+Score 80-100: strong match on skills + preferred industry + location fits + seniority appropriate.
+Score 60-79: decent overlap on most dimensions, minor concerns.
+Score 40-59: partial match but notable gaps (seniority, location, or skill mismatch).
+Score 0-39: poor fit (wrong field, too senior, wrong location, or deal-breaker present).
 """
 
 BATCH_USER_PROMPT = """\
@@ -110,10 +175,11 @@ def _llm_analyze_batch(jobs: list[Job]) -> dict[int, dict]:
     )
 
     try:
+        system_prompt = _build_system_prompt()
         response = client.messages.create(
             model=ANALYSIS_MODEL,
             max_tokens=150 * len(jobs),
-            system=BATCH_SYSTEM_PROMPT,
+            system=system_prompt,
             messages=[{"role": "user", "content": prompt}],
         )
         logger.info(
@@ -134,6 +200,11 @@ def analyze_new_jobs() -> list[Job]:
         return []
 
     # ── Stage 1: Local keyword scoring ────────────────────────────────────────
+    # Load domain keywords for priority industry detection
+    from personal_assistant.analyzer.keyword_scorer import _load_weights as _kw_load
+    _wts = _kw_load()
+    weights_domain_keywords = set(_wts.get("domain", {}).keys())
+
     high_jobs: list[Job] = []
     borderline_jobs: list[Job] = []
     rejected_count = 0
@@ -198,8 +269,7 @@ def analyze_new_jobs() -> list[Job]:
                       or "remote" in (job.description or "").lower()[:500],
             is_priority_industry=any(
                 kw in result["breakdown"]
-                for kw in ("healthcare", "medical", "medtech", "healthtech",
-                           "fhir", "pacs", "ophthalmology", "biotech")
+                for kw in weights_domain_keywords
             ),
         )
 
