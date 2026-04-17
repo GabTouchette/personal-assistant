@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #1a1d27;
+    --bg3: #242834;
+    --border: #2e3345;
+    --text: #e1e4ed;
+    --text2: #8b90a0;
+    --accent: #3b82f6;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --cyan: #06b6d4;
+    --radius: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Stats bar ─────────────────────────────────────────── */
+  .stats-bar {
+    display: flex;
+    gap: 24px;
+    padding: 16px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .stats-bar h1 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-right: auto;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Kanban ────────────────────────────────────────────── */
+  .kanban {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    overflow-x: auto;
+    min-height: calc(100vh - 120px);
+    align-items: flex-start;
+  }
+  .column {
+    flex: 0 0 260px;
+    background: var(--bg2);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 140px);
+  }
+  .column-header {
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .column-count {
+    background: var(--bg3);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  .column-body {
+    padding: 8px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  /* ── Job card ──────────────────────────────────────────── */
+  .card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .card-score {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+  .score-high { background: rgba(16,185,129,0.2); color: var(--green); }
+  .score-mid  { background: rgba(245,158,11,0.2); color: var(--yellow); }
+  .score-low  { background: rgba(139,92,246,0.2); color: var(--purple); }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+  .card-company {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 4px;
+  }
+  .card-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text2);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-easy { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-remote { background: rgba(59,130,246,0.15); color: var(--accent); }
+  .badge-interview { background: rgba(245,158,11,0.15); color: var(--yellow); }
+
+  /* ── Collapsed section ─────────────────────────────────── */
+  .collapsed-section {
+    padding: 0 16px 16px;
+  }
+  .collapsed-toggle {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    color: var(--text2);
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+  }
+  .collapsed-toggle:hover { border-color: var(--accent); }
+  .collapsed-body {
+    display: none;
+    padding: 8px 0;
+  }
+  .collapsed-body.open { display: block; }
+  .collapsed-row {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    align-items: center;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .collapsed-row:hover { background: var(--bg3); }
+
+  /* ── Detail panel ──────────────────────────────────────── */
+  .panel-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+  }
+  .panel-overlay.open { display: block; }
+  .panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 520px;
+    max-width: 90vw;
+    height: 100vh;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    z-index: 101;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel.open { display: flex; }
+  .panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-shrink: 0;
+  }
+  .panel-close {
+    background: none;
+    border: none;
+    color: var(--text2);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+  }
+  .panel-close:hover { color: var(--text); }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  /* ── Detail sections ───────────────────────────────────── */
+  .detail-section {
+    margin-bottom: 20px;
+  }
+  .detail-section h3 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text2);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Timeline */
+  .timeline { padding-left: 16px; border-left: 2px solid var(--border); }
+  .timeline-item {
+    position: relative;
+    padding: 0 0 16px 16px;
+    font-size: 13px;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -21px;
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--bg2);
+  }
+  .timeline-item.active::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .timeline-label { font-weight: 600; }
+  .timeline-date { font-size: 11px; color: var(--text2); }
+
+  /* Status update form */
+  .status-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .status-form select, .status-form input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    font-size: 13px;
+  }
+  .status-form select:focus, .status-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .btn {
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-outline { background: transparent; color: var(--text); }
+  .btn-outline:hover { background: var(--bg3); }
+
+  /* Notes */
+  .notes-area {
+    width: 100%;
+    min-height: 60px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .notes-area:focus { outline: none; border-color: var(--accent); }
+
+  /* Contact card */
+  .contact-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .contact-name { font-weight: 600; }
+  .contact-title { font-size: 12px; color: var(--text2); }
+  .msg-preview {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text2);
+    white-space: pre-wrap;
+    max-height: 100px;
+    overflow-y: auto;
+  }
+  .msg-status-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  /* Cover email */
+  .cover-email {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    font-size: 13px;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+</style>
+</head>
+<body>
+
+<!-- ── Stats Bar ──────────────────────────────────────────────────────── -->
+<div class="stats-bar">
+  <h1>📊 Job Dashboard</h1>
+  <div class="stat">
+    <div class="stat-value">{{ stats.total }}</div>
+    <div class="stat-label">Total Jobs</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color: var(--purple)">{{ stats.applied }}</div>
+    <div class="stat-label">Applied</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color: var(--yellow)">{{ stats.interviews }}</div>
+    <div class="stat-label">Interviews</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" style="color: var(--green)">{{ stats.response_rate }}%</div>
+    <div class="stat-label">Response Rate</div>
+  </div>
+</div>
+
+<!-- ── Kanban Board ───────────────────────────────────────────────────── -->
+<div class="kanban">
+  {% for col in columns %}
+  <div class="column">
+    <div class="column-header" style="border-top: 3px solid {{ col.color }}">
+      {{ col.label }}
+      <span class="column-count">{{ col.jobs | length }}</span>
+    </div>
+    <div class="column-body">
+      {% for job in col.jobs %}
+      <div class="card" onclick="openDetail({{ job.id }})">
+        <div class="card-score {% if job.relevance_score >= 70 %}score-high{% elif job.relevance_score >= 25 %}score-mid{% else %}score-low{% endif %}">
+          {{ job.relevance_score or 0 }}/100
+        </div>
+        <div class="card-title">{{ job.title }}</div>
+        <div class="card-company">{{ job.company }}</div>
+        <div class="card-meta">
+          {% if job.is_easy_apply %}<span class="badge badge-easy">⚡ Easy</span>{% endif %}
+          {% if job.is_remote %}<span class="badge badge-remote">🏠 Remote</span>{% endif %}
+          {% if job.interview_date %}<span class="badge badge-interview">📅 {{ job.interview_date.strftime('%b %d') }}</span>{% endif %}
+          <span>{{ job.discovered_at.strftime('%b %d') if job.discovered_at else '' }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ── Collapsed (Rejected/Discovered/Failed) ─────────────────────────── -->
+{% if collapsed_jobs %}
+<div class="collapsed-section">
+  <button class="collapsed-toggle" onclick="toggleCollapsed()">
+    ▶ Skipped / Rejected / Other ({{ collapsed_jobs | length }})
+  </button>
+  <div class="collapsed-body" id="collapsed-body">
+    {% for job in collapsed_jobs %}
+    <div class="collapsed-row" onclick="openDetail({{ job.id }})">
+      <span class="card-score {% if job.relevance_score >= 70 %}score-high{% elif job.relevance_score >= 25 %}score-mid{% else %}score-low{% endif %}" style="font-size:10px">
+        {{ job.relevance_score or 0 }}
+      </span>
+      <span style="flex:1;font-weight:600">{{ job.title }}</span>
+      <span style="color:var(--text2)">{{ job.company }}</span>
+      <span style="color:var(--text2);font-size:11px">{{ (job.status.value if job.status else '') | replace('_', ' ') | title }}</span>
+      <span style="color:var(--text2);font-size:11px">{{ job.discovered_at.strftime('%b %d') if job.discovered_at else '' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Detail Panel ───────────────────────────────────────────────────── -->
+<div class="panel-overlay" id="panel-overlay" onclick="closeDetail()"></div>
+<div class="panel" id="detail-panel">
+  <div class="panel-header">
+    <div id="panel-header-content"></div>
+    <button class="panel-close" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body">
+    <div style="text-align:center;color:var(--text2);padding:40px">Loading...</div>
+  </div>
+</div>
+
+<script>
+const STATUS_LABELS = {{ status_labels | tojson }};
+const MANUAL_STATUSES = {{ manual_statuses | tojson }};
+
+// ── Panel open/close ──────────────────────────────────────
+function openDetail(jobId) {
+  document.getElementById('panel-overlay').classList.add('open');
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('panel-body').innerHTML = '<div style="text-align:center;color:var(--text2);padding:40px">Loading...</div>';
+  document.getElementById('panel-header-content').innerHTML = '';
+  loadJobDetail(jobId);
+}
+
+function closeDetail() {
+  document.getElementById('panel-overlay').classList.remove('open');
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+function toggleCollapsed() {
+  const body = document.getElementById('collapsed-body');
+  body.classList.toggle('open');
+  const btn = body.previousElementSibling;
+  btn.textContent = body.classList.contains('open')
+    ? btn.textContent.replace('▶', '▼')
+    : btn.textContent.replace('▼', '▶');
+}
+
+// ── Load job detail ───────────────────────────────────────
+async function loadJobDetail(jobId) {
+  const resp = await fetch(`/api/jobs/${jobId}`);
+  if (!resp.ok) { document.getElementById('panel-body').innerHTML = '<p>Error loading job.</p>'; return; }
+  const job = await resp.json();
+  renderDetail(job);
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function renderDetail(job) {
+  // Header
+  const scoreClass = (job.relevance_score || 0) >= 70 ? 'score-high' : (job.relevance_score || 0) >= 25 ? 'score-mid' : 'score-low';
+  document.getElementById('panel-header-content').innerHTML = `
+    <div class="card-score ${scoreClass}" style="margin-bottom:6px">${job.relevance_score || 0}/100</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:2px">${esc(job.title)}</div>
+    <div style="font-size:14px;color:var(--text2)">${esc(job.company)} · ${esc(job.location || 'N/A')}</div>
+    ${job.job_url ? `<a href="${esc(job.job_url)}" target="_blank" style="font-size:12px">View on LinkedIn ↗</a>` : ''}
+  `;
+
+  let html = '';
+
+  // ── Status update ──
+  html += `<div class="detail-section">
+    <h3>Update Status</h3>
+    <div class="status-form">
+      <select id="status-select">
+        <option value="">Current: ${esc(STATUS_LABELS[job.status] || job.status)}</option>
+        ${MANUAL_STATUSES.map(s => `<option value="${s}" ${s === job.status ? 'selected' : ''}>${esc(STATUS_LABELS[s] || s)}</option>`).join('')}
+      </select>
+      <input type="datetime-local" id="interview-date" value="${job.interview_date ? job.interview_date.slice(0,16) : ''}" style="width:180px" placeholder="Interview date">
+      <button class="btn btn-sm" onclick="updateStatus(${job.id})">Save</button>
+    </div>
+  </div>`;
+
+  // ── Timeline ──
+  html += `<div class="detail-section"><h3>Timeline</h3><div class="timeline">`;
+  const events = [];
+  if (job.discovered_at) events.push({label: 'Discovered', date: job.discovered_at, status: 'discovered'});
+  // Infer events from current status progression
+  const statusOrder = ['discovered','summarized','notified','approved','cv_generated','applied','networking_done','response_received','interview_scheduled','interview_done','second_interview','offer','hired'];
+  const currentIdx = statusOrder.indexOf(job.status);
+  if (currentIdx >= 2) events.push({label: 'Notified', date: job.discovered_at});
+  if (currentIdx >= 3) events.push({label: 'Approved', date: null});
+  if (currentIdx >= 4) events.push({label: 'CV Generated', date: null});
+  if (job.applied_at) events.push({label: 'Applied', date: job.applied_at});
+  if (['response_received','interview_scheduled','interview_done','second_interview','offer','hired'].includes(job.status)) {
+    events.push({label: STATUS_LABELS[job.status], date: job.interview_date, status: job.status});
+  }
+  if (job.status === 'rejected') events.push({label: 'Rejected', date: null, status: 'rejected'});
+  if (job.status === 'denied') events.push({label: 'Denied', date: null, status: 'denied'});
+
+  events.forEach((ev, i) => {
+    const isLast = i === events.length - 1;
+    const dateStr = ev.date ? new Date(ev.date).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+    html += `<div class="timeline-item ${isLast ? 'active' : ''}">
+      <div class="timeline-label">${esc(ev.label)}</div>
+      ${dateStr ? `<div class="timeline-date">${dateStr}</div>` : ''}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // ── Score Analysis ──
+  if (job.summary) {
+    html += `<div class="detail-section">
+      <h3>Score Analysis</h3>
+      <div style="font-size:13px;color:var(--text2)">${esc(job.summary)}</div>
+    </div>`;
+  }
+
+  // ── Tailored CV ──
+  if (job.tailored_cv_path) {
+    html += `<div class="detail-section">
+      <h3>Tailored CV</h3>
+      <a href="/api/jobs/${job.id}/cv" target="_blank" class="btn btn-sm btn-outline">📄 Download PDF</a>
+    </div>`;
+  }
+
+  // ── Cover Email ──
+  if (job.cover_email) {
+    html += `<div class="detail-section">
+      <h3>Cover Email</h3>
+      <div class="cover-email">${esc(job.cover_email)}</div>
+    </div>`;
+  }
+
+  // ── Contacts & Outreach ──
+  if (job.contacts && job.contacts.length > 0) {
+    html += `<div class="detail-section"><h3>Contacts & Outreach (${job.contacts.length})</h3>`;
+    job.contacts.forEach(c => {
+      html += `<div class="contact-card">
+        <div class="contact-name">${esc(c.name)}${c.role ? ` · <span style="color:var(--text2);font-weight:normal">${esc(c.role)}</span>` : ''}</div>
+        ${c.title ? `<div class="contact-title">${esc(c.title)}</div>` : ''}
+        ${c.linkedin_url ? `<a href="${esc(c.linkedin_url)}" target="_blank" style="font-size:12px">LinkedIn ↗</a>` : ''}
+        ${c.email ? `<div style="font-size:12px">${esc(c.email)}</div>` : ''}`;
+      if (c.messages && c.messages.length > 0) {
+        c.messages.forEach(m => {
+          const statusColor = m.status === 'sent' ? 'var(--green)' : m.status === 'drafted' ? 'var(--yellow)' : 'var(--text2)';
+          html += `<div style="margin-top:4px">
+            <span style="font-size:11px;color:var(--text2)">${esc(m.channel || '')}</span>
+            <span class="msg-status-badge" style="background:${statusColor}22;color:${statusColor}">${esc(m.status || '')}</span>
+            ${m.sent_at ? `<span style="font-size:11px;color:var(--text2)"> · ${new Date(m.sent_at).toLocaleDateString()}</span>` : ''}
+          </div>
+          <div class="msg-preview">${esc(m.body)}</div>`;
+        });
+      }
+      html += `</div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── Applications ──
+  if (job.applications && job.applications.length > 0) {
+    html += `<div class="detail-section"><h3>Applications</h3>`;
+    job.applications.forEach(a => {
+      html += `<div style="font-size:13px;margin-bottom:6px">
+        <strong>${esc(a.method || 'Unknown')}</strong>
+        ${a.submitted_at ? ` · ${new Date(a.submitted_at).toLocaleDateString()}` : ''}
+        ${a.success !== null ? (a.success ? ' · ✅' : ' · ❌') : ''}
+        ${a.notes ? `<div style="color:var(--text2);font-size:12px">${esc(a.notes)}</div>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // ── Notes ──
+  html += `<div class="detail-section">
+    <h3>Notes</h3>
+    <textarea class="notes-area" id="notes-area" placeholder="Add notes...">${esc(job.user_notes || '')}</textarea>
+    <div style="margin-top:6px"><button class="btn btn-sm btn-outline" onclick="saveNotes(${job.id})">Save Notes</button></div>
+  </div>`;
+
+  // ── Description (collapsible) ──
+  if (job.description) {
+    html += `<div class="detail-section">
+      <h3 style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        Job Description ▶
+      </h3>
+      <div style="display:none;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:300px;overflow-y:auto">${esc(job.description)}</div>
+    </div>`;
+  }
+
+  document.getElementById('panel-body').innerHTML = html;
+}
+
+// ── API actions ────────────────────────────────────────────
+async function updateStatus(jobId) {
+  const status = document.getElementById('status-select').value;
+  if (!status) return;
+  const interviewDate = document.getElementById('interview-date').value;
+  const body = {status};
+  if (interviewDate) body.interview_date = interviewDate;
+
+  const resp = await fetch(`/api/jobs/${jobId}/status`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  if (resp.ok) {
+    location.reload();
+  }
+}
+
+async function saveNotes(jobId) {
+  const notes = document.getElementById('notes-area').value;
+  await fetch(`/api/jobs/${jobId}/notes`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({notes}),
+  });
+  const btn = document.querySelector('#notes-area + div .btn');
+  btn.textContent = '✓ Saved';
+  setTimeout(() => btn.textContent = 'Save Notes', 1500);
+}
+
+// Keyboard shortcut: Escape to close panel
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+# Base CV data — Claude will tailor bullet points per job while keeping facts accurate.
+# NOTE (Quebec law): Never use the title "Engineer" — use "Developer" or "Technologist".
+#   "Engineer"/"Ingénieur" is a protected title requiring OIQ membership.
+
+name: "Gabriel Touchette"
+title: "Full Stack Software Developer"
+location: "Montreal, Canada (Remote/On-site)"
+phone: "(438) 787-1795"
+email: "gabriel.touchette@gmail.com"
+github: "https://github.com/GabTouchette"
+linkedin: "https://www.linkedin.com/in/gabriel-r-touchette"
+website: ""
+
+experience:
+  - title: "Lead Software Developer"
+    company: "LightX Innovations"
+    location: "Montreal, Canada (Remote)"
+    dates: "May 2024 – Present"
+    bullets:
+      - "Led development of a medical device platform automating slit lamp exams in ophthalmology clinics"
+      - "Built a cross-platform Flutter application (iOS, Android, Web) for clinical imaging workflows"
+      - "Deployed across 40+ clinics in the US, Canada, and Europe"
+      - "Re-architected the entire application to improve scalability and maintainability across multi-clinic deployments"
+      - "Designed system architecture using FHIR and PACS standards for interoperability with hospital systems"
+      - "Implemented synchronized dual-phone capture system enabling stereoscopic medical imaging"
+      - "Developed review/gallery system and high-definition live telemedicine features for remote examinations"
+      - "Built and operated a distributed infrastructure with per-clinic isolated servers for healthcare compliance"
+      - "Led technical decisions, code reviews, and mentored 1–2 engineers under CTO direction"
+      - "Ensured compliance with HIPAA, PIPEDA, and GDPR across system design and deployment"
+      - "Worked in a production healthcare infrastructure environment using Azure, Kubernetes (AKS), Terraform, and ArgoCD"
+
+  - title: "Full Stack Developer"
+    company: "Power Go"
+    location: ""
+    dates: "2022 – 2024"
+    bullets:
+      - "Built internal tools and client-facing applications using Vue.js and Django"
+      - "Developed inventory management systems for dealership platforms"
+      - "Collaborated with cross-functional teams to deliver scalable web solutions"
+
+  - title: "Web Developer Intern"
+    company: "Sports AI"
+    location: ""
+    dates: "2022 – 2022"
+    bullets:
+      - "Built a React web application from scratch under tight deadlines"
+      - "Delivered production-ready application for company launch"
+
+education:
+  - degree: "B.Eng. Software Engineering"
+    institution: "Polytechnique Montréal"
+    dates: "2020 – 2025"
+    details: []
+
+projects:
+  - name: "AI Recipe Platform"
+    url: ""
+    dates: ""
+    bullets:
+      - "Full-stack application built with Flutter, Django, and PostgreSQL"
+      - "OpenAI-powered chatbot to create and edit recipes"
+      - "OCR-based recipe extraction and web scraping pipeline"
+      - "Social feed with ranking algorithm and infinite scroll (\"For You\" system)"
+      - "Meal planning, calorie estimation, and grocery list automation in progress"
+      - "Deployed on TestFlight and Heroku"
+
+# Section labels — used by the HTML template (do not remove)
+labels:
+  experience: "Experience"
+  projects: "Projects"
+  education: "Education"
+  skills: "Skills"
+
+skills:
+  - category: "Languages"
+    technologies: ["Python", "TypeScript", "JavaScript", "Java", "C++", "HTML", "CSS"]
+  - category: "Frameworks & Libraries"
+    technologies: ["Flutter", "React", "Vue.js", "Angular", "Django", "Node.js", "FastAPI"]
+  - category: "Databases"
+    technologies: ["PostgreSQL", "SQLite", "Redis"]
+  - category: "Cloud & DevOps"
+    technologies: ["Azure", "Docker", "Kubernetes (AKS)", "Terraform", "ArgoCD", "CI/CD pipelines"]
+  - category: "Practices"
+    technologies: ["System design", "REST APIs", "Distributed systems", "Microservices", "Agile / Scrum", "Code review"]
+  - category: "Domain Expertise"
+    technologies: ["Healthcare systems", "Medical imaging (FHIR / PACS)", "HIPAA / GDPR / PIPEDA compliance"]
+  - category: "Spoken Languages"
+    technologies: ["French (native)", "English (fluent)"]

@@ -1,0 +1,88 @@
+# CV de base (version française) — Claude adapte les points selon le poste.
+# IMPORTANT (Loi du Québec) : Ne jamais utiliser le titre «Ingénieur» sans être
+#   membre de l'Ordre des ingénieurs du Québec. Utiliser «Développeur» ou «Technologue».
+
+name: "Gabriel Touchette"
+title: "Développeur Logiciel Full Stack"
+location: "Montréal, Canada (Télétravail/Présentiel)"
+phone: "(438) 787-1795"
+email: "gabriel.touchette@gmail.com"
+github: "https://github.com/GabTouchette"
+linkedin: "https://www.linkedin.com/in/gabriel-r-touchette"
+website: ""
+
+experience:
+  - title: "Développeur Logiciel Principal"
+    company: "LightX Innovations"
+    location: "Montréal, Canada (Télétravail)"
+    dates: "Mai 2024 – Présent"
+    bullets:
+      - "Piloté le développement d'une plateforme de dispositif médical automatisant les examens à la lampe à fente dans les cliniques d'ophtalmologie"
+      - "Développé une application Flutter multiplateforme (iOS, Android, Web) pour les flux de travail d'imagerie clinique"
+      - "Déployé dans plus de 40 cliniques aux États-Unis, au Canada et en Europe"
+      - "Réarchitecturé l'ensemble de l'application pour améliorer la scalabilité et la maintenabilité dans les déploiements multi-cliniques"
+      - "Conçu l'architecture système selon les normes FHIR et PACS pour l'interopérabilité avec les systèmes hospitaliers"
+      - "Implanté un système de capture dual-téléphone synchronisé permettant l'imagerie médicale stéréoscopique"
+      - "Développé un système de galerie/révision et des fonctionnalités de télémédecine haute définition pour les examens à distance"
+      - "Mis en place une infrastructure distribuée avec serveurs isolés par clinique pour la conformité en soins de santé"
+      - "Pris des décisions techniques, effectué des révisions de code et encadré 1–2 développeurs sous la direction du CTO"
+      - "Assuré la conformité avec HIPAA, PIPEDA et RGPD dans la conception et le déploiement des systèmes"
+      - "Travaillé dans un environnement d'infrastructure de soins de santé en production : Azure, Kubernetes (AKS), Terraform, ArgoCD"
+
+  - title: "Développeur Full Stack"
+    company: "Power Go"
+    location: ""
+    dates: "2022 – 2024"
+    bullets:
+      - "Développé des outils internes et des applications destinées aux clients avec Vue.js et Django"
+      - "Créé des systèmes de gestion d'inventaire pour des plateformes de concessionnaires"
+      - "Collaboré avec des équipes pluridisciplinaires pour livrer des solutions web évolutives"
+
+  - title: "Développeur Web (Stagiaire)"
+    company: "Sports AI"
+    location: ""
+    dates: "2022 – 2022"
+    bullets:
+      - "Développé une application web React de A à Z dans des délais serrés"
+      - "Livré une application prête pour la production lors du lancement de l'entreprise"
+
+education:
+  - degree: "B.Ing. Génie logiciel"
+    institution: "Polytechnique Montréal"
+    dates: "2020 – 2025"
+    details: []
+
+projects:
+  - name: "Plateforme de Recettes IA"
+    url: ""
+    dates: ""
+    bullets:
+      - "Application full stack développée avec Flutter, Django et PostgreSQL"
+      - "Chatbot propulsé par OpenAI pour créer et modifier des recettes"
+      - "Pipeline d'extraction de recettes par OCR et web scraping"
+      - "Fil social avec algorithme de classement et défilement infini (système «Pour toi»)"
+      - "Planification de repas, estimation des calories et automatisation des listes d'épicerie en cours"
+      - "Déployé sur TestFlight et Heroku"
+
+skills:
+  - category: "Langages"
+    technologies: ["Python", "TypeScript", "JavaScript", "Java", "C++", "HTML", "CSS"]
+  - category: "Cadres et bibliothèques"
+    technologies: ["Flutter", "React", "Vue.js", "Angular", "Django", "Node.js", "FastAPI"]
+  - category: "Bases de données"
+    technologies: ["PostgreSQL", "SQLite", "Redis"]
+  - category: "Infonuagique et DevOps"
+    technologies: ["Azure", "Docker", "Kubernetes (AKS)", "Terraform", "ArgoCD", "Pipelines CI/CD"]
+  - category: "Pratiques"
+    technologies: ["Architecture système", "API REST", "Systèmes distribués", "Microservices", "Agile / Scrum", "Révision de code"]
+  - category: "Expertise Métier"
+    technologies: ["Systèmes de santé", "Imagerie médicale (FHIR / PACS)", "Conformité HIPAA / RGPD / PIPEDA"]
+  - category: "Langues"
+    technologies: ["Français (langue maternelle)", "Anglais (courant)"]
+
+# Section labels — utilisées par le gabarit HTML (ne pas supprimer)
+labels:
+  experience: "Expérience"
+  projects: "Projets"
+  education: "Formation"
+  skills: "Compétences"

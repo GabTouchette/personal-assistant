@@ -1,0 +1,32 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets & local config
+.env
+*.db
+*.sqlite
+
+# Playwright state
+browser_data/
+storage_state.json
+
+# Generated CVs
+output/
+
+# IDE
+.idea/
+.vscode/
+
+# Backup files
+*.bak
+
+# Nested repo artifact
+personal-assistant/

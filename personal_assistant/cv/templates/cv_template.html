@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="{{ labels.lang | default('en') }}">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: letter;
+    margin: 0.6in 0.7in;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.4;
+    color: #1a1a1a;
+  }
+  a { color: #0066cc; text-decoration: none; }
+  h1 {
+    font-size: 20pt;
+    font-weight: 700;
+    margin-bottom: 2pt;
+    color: #111;
+  }
+  .contact-line {
+    font-size: 9pt;
+    color: #444;
+    margin-bottom: 12pt;
+  }
+  .section-title {
+    font-size: 11pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    border-bottom: 1.5pt solid #333;
+    padding-bottom: 2pt;
+    margin-top: 12pt;
+    margin-bottom: 6pt;
+    color: #222;
+  }
+  .entry { margin-bottom: 8pt; }
+  .entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .entry-title { font-weight: 700; font-size: 10pt; }
+  .entry-subtitle { font-style: italic; color: #555; font-size: 9.5pt; }
+  .entry-date { font-size: 9pt; color: #666; white-space: nowrap; }
+  ul {
+    margin-left: 14pt;
+    margin-top: 2pt;
+  }
+  li { margin-bottom: 1pt; font-size: 9.5pt; }
+  .skills-grid {
+    display: grid;
+    grid-template-columns: 100pt 1fr;
+    gap: 2pt 8pt;
+    font-size: 9.5pt;
+  }
+  .skills-grid .label { font-weight: 600; color: #333; }
+</style>
+</head>
+<body>
+
+<h1>{{ name }}</h1>
+{% if title %}<div style="font-size: 12pt; color: #444; margin-bottom: 2pt;">{{ title }}</div>{% endif %}
+<div class="contact-line">
+  {{ location }}
+  {% if phone %} · {{ phone }}{% endif %}
+  {% if email %} · <a href="mailto:{{ email }}">{{ email }}</a>{% endif %}
+  {% if linkedin %} · <a href="{{ linkedin }}">LinkedIn</a>{% endif %}
+  {% if github %} · <a href="{{ github }}">github.com/GabTouchette</a>{% endif %}
+  {% if website %} · <a href="{{ website }}">{{ website }}</a>{% endif %}
+</div>
+
+<div class="section-title">{{ labels.skills }}</div>
+<div class="skills-grid">
+  {% for group in skills %}
+  <span class="label">{{ group.category }}:</span>
+  <span>{{ group.technologies | join(', ') }}</span>
+  {% endfor %}
+</div>
+
+<div class="section-title">{{ labels.experience }}</div>
+{% for exp in experience %}
+<div class="entry">
+  <div class="entry-header">
+    <div>
+      <span class="entry-title">{{ exp.title }}</span>
+      <span class="entry-subtitle"> — {{ exp.company }}</span>
+    </div>
+    <span class="entry-date">{{ exp.dates }}</span>
+  </div>
+  {% if exp.location %}<div style="font-size: 9pt; color: #666;">{{ exp.location }}</div>{% endif %}
+  <ul>
+    {% for bullet in exp.bullets %}
+    <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endfor %}
+
+{% if projects %}
+<div class="section-title">{{ labels.projects }}</div>
+{% for proj in projects %}
+<div class="entry">
+  <div class="entry-header">
+    <span class="entry-title">{{ proj.name }}{% if proj.url %} — <a href="{{ proj.url }}">{{ proj.url }}</a>{% endif %}</span>
+    <span class="entry-date">{{ proj.dates }}</span>
+  </div>
+  <ul>
+    {% for bullet in proj.bullets %}
+    <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="section-title">{{ labels.education }}</div>
+{% for edu in education %}
+<div class="entry">
+  <div class="entry-header">
+    <div>
+      <span class="entry-title">{{ edu.degree }}</span>
+      <span class="entry-subtitle"> — {{ edu.institution }}</span>
+    </div>
+    <span class="entry-date">{{ edu.dates }}</span>
+  </div>
+  {% if edu.details %}
+  <ul>
+    {% for d in edu.details %}
+    <li>{{ d }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endfor %}
+
+</body>
+</html>
