@@ -68,17 +68,21 @@ _USER_TITLE_WEIGHT = 12
 _USER_DEAL_BREAKER_PENALTY = -20
 
 
-def _load_prefs() -> dict:
+def _load_prefs(user_id: int | None = None) -> dict:
     """Load user preferences from disk."""
-    if PREFS_PATH.exists():
+    if user_id is not None:
+        path = Path(settings.output_dir) / f"user_preferences_{user_id}.json"
+    else:
+        path = PREFS_PATH
+    if path.exists():
         try:
-            return json.loads(PREFS_PATH.read_text())
+            return json.loads(path.read_text())
         except Exception:
             pass
     return {}
 
 
-def _load_weights() -> dict:
+def _load_weights(user_id: int | None = None) -> dict:
     """Load weights from disk, merge with defaults, then inject user preferences."""
     if WEIGHTS_PATH.exists():
         try:
@@ -99,7 +103,7 @@ def _load_weights() -> dict:
         merged = json.loads(json.dumps(_DEFAULT_WEIGHTS))
 
     # Inject user-defined keywords from preferences
-    prefs = _load_prefs()
+    prefs = _load_prefs(user_id)
     radar = prefs.get("weights", {})
 
     # Skills from preferences → "skills" category
@@ -207,7 +211,7 @@ def score_job(job: Job) -> dict:
             "blocked": bool,
         }
     """
-    weights = _load_weights()
+    weights = _load_weights(job.user_id)
     text = _normalize(" ".join([
         job.title or "",
         job.company or "",
@@ -259,7 +263,7 @@ def score_job(job: Job) -> dict:
             raw += penalty
 
     # ── Salary penalty ────────────────────────────────────────────────────
-    prefs = _load_prefs()
+    prefs = _load_prefs(job.user_id)
     min_salary = prefs.get("salary", settings.min_salary)
     radar = prefs.get("weights", {})
     salary_importance = radar.get("compensation", 50) / 100  # 0.0-1.0

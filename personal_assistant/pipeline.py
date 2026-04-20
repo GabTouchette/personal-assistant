@@ -38,14 +38,14 @@ from personal_assistant.scraper.jobs import scrape_jobs
 logger = logging.getLogger(__name__)
 
 
-async def run_discovery_pipeline() -> None:
-    """Stage 1 (scheduled 08:00): Scrape \u2192 Analyze \u2192 SMS notify."""
+async def run_discovery_pipeline(user_id: int) -> None:
+    """Stage 1 (scheduled 08:00): Scrape → Analyze → SMS notify."""
     logger.info("=== Starting discovery pipeline ===")
 
     session = LinkedInSession()
     await session.start()
     try:
-        await scrape_jobs(session)
+        await scrape_jobs(session, user_id)
     finally:
         await session.close()
 

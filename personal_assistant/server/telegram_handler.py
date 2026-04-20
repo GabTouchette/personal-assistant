@@ -124,8 +124,14 @@ async def cmd_run(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("<b>Starting discovery pipeline...</b>\n<i>This may take a few minutes.</i>", parse_mode=HTML)
 
     from personal_assistant.pipeline import run_discovery_pipeline
+    from personal_assistant.db.models import get_session, User
+    from sqlalchemy import select
     try:
-        await run_discovery_pipeline()
+        s = get_session()
+        admin = s.execute(select(User).where(User.is_admin == True)).scalar_one_or_none()
+        s.close()
+        uid = admin.id if admin else 1
+        await run_discovery_pipeline(uid)
         await update.message.reply_text("\u2705 <b>Discovery pipeline complete!</b>", parse_mode=HTML)
     except Exception as e:
         logger.error("Pipeline error: %s", e)

@@ -78,7 +78,8 @@ async function handleRegister(e) {
   try {
     var r=await fetch('/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('r-user').value,password:pass})});
     var d=await r.json();
-    if(d.ok) { msg.className='msg success'; msg.textContent='Access requested! An admin will review your request. You\u2019ll be able to login once approved.'; btn.style.display='none'; }
+    if(d.ok && d.auto_approved) { msg.className='msg success'; msg.textContent='Account created! Redirecting\u2026'; btn.style.display='none'; setTimeout(function(){ window.location.href='/'; }, 1200); }
+    else if(d.ok) { msg.className='msg info'; msg.textContent='Access requested \u2014 an admin will approve your account via Telegram. Come back once approved.'; btn.style.display='none'; }
     else { msg.className='msg error'; msg.textContent=d.error||'Registration failed'; }
   } catch(err) { msg.className='msg error'; msg.textContent='Connection error'; }
   btn.disabled=false; btn.textContent='Request Access';

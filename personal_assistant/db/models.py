@@ -99,11 +99,15 @@ class Job(Base):
     tailored_cv_path = Column(String(512))
     cover_email = Column(Text)
 
+    # Ownership
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
     # Human tracking
     user_notes = Column(Text)
     interview_date = Column(DateTime)
 
     # Relationships
+    user = relationship("User", back_populates="jobs")
     applications = relationship("Application", back_populates="job")
     contacts = relationship("Contact", back_populates="job")
 
@@ -163,6 +167,8 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    jobs = relationship("Job", back_populates="user")
+
 
 # Engine & session factory
 engine = create_engine(settings.database_url, echo=False)
@@ -176,7 +182,11 @@ def init_db():
     import sqlite3
     db_path = settings.database_url.replace("sqlite:///", "")
     conn = sqlite3.connect(db_path)
-    for col, coltype in [("user_notes", "TEXT"), ("interview_date", "DATETIME")]:
+    for col, coltype in [
+        ("user_notes", "TEXT"),
+        ("interview_date", "DATETIME"),
+        ("user_id", "INTEGER"),
+    ]:
         try:
             conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} {coltype}")
         except sqlite3.OperationalError:

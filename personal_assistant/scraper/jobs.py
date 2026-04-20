@@ -293,9 +293,12 @@ async def _extract_job_details(page: Page, job_id: str) -> RawJob | None:
         return None
 
 
-def _load_search_prefs() -> dict:
+def _load_search_prefs(user_id: int | None = None) -> dict:
     """Load user preferences for search parameters."""
-    prefs_path = Path(settings.output_dir) / "user_preferences.json"
+    if user_id is not None:
+        prefs_path = Path(settings.output_dir) / f"user_preferences_{user_id}.json"
+    else:
+        prefs_path = Path(settings.output_dir) / "user_preferences.json"
     if prefs_path.exists():
         try:
             return json.load(prefs_path.open())
@@ -326,11 +329,12 @@ def _parse_posted_at(text: str) -> "datetime | None":
     return datetime.utcnow() - delta_map.get(unit, timedelta())
 
 
-async def _persist_raw(raw: RawJob, all_jobs: list[RawJob]) -> None:
+async def _persist_raw(raw: RawJob, all_jobs: list[RawJob], user_id: int) -> None:
     """Deduplicate and persist a scraped job."""
     posted_at = _parse_posted_at(raw.posted_at_text)
     upsert_job(
         linkedin_job_id=raw.linkedin_job_id,
+        user_id=user_id,
         title=raw.title,
         company=raw.company,
         location=raw.location,
@@ -345,7 +349,7 @@ async def _persist_raw(raw: RawJob, all_jobs: list[RawJob]) -> None:
 
 
 async def _scrape_search(page: Page, keyword: str, location: str,
-                         all_jobs: list[RawJob], *, network_filter: bool = False) -> None:
+                         all_jobs: list[RawJob], user_id: int, *, network_filter: bool = False) -> None:
     """Run a single keyword+location search and collect results."""
     url = _build_search_url(keyword, location, network_filter=network_filter)
     tag = f"'{keyword}' in '{location}'"
@@ -362,14 +366,14 @@ async def _scrape_search(page: Page, keyword: str, location: str,
     for jid in job_ids:
         raw = await _extract_job_details(page, jid)
         if raw:
-            await _persist_raw(raw, all_jobs)
+            await _persist_raw(raw, all_jobs, user_id)
             await random_mouse_movement(page)
 
     await human_delay(3, 6)
 
 
 async def _scrape_company_page(page: Page, company_name: str,
-                               all_jobs: list[RawJob]) -> None:
+                               all_jobs: list[RawJob], user_id: int) -> None:
     """Scrape the jobs tab of a company page."""
     # Convert human name to likely slug (lowercase, hyphenated)
     slug = re.sub(r"[^a-z0-9]+", "-", company_name.lower()).strip("-")
@@ -393,7 +397,7 @@ async def _scrape_company_page(page: Page, company_name: str,
         for jid in job_ids:
             raw = await _extract_job_details(page, jid)
             if raw:
-                await _persist_raw(raw, all_jobs)
+                await _persist_raw(raw, all_jobs, user_id)
                 await random_mouse_movement(page)
 
         await human_delay(2, 5)
@@ -435,7 +439,7 @@ async def _resolve_connection_company(page: Page, profile_url: str) -> str | Non
     return None
 
 
-async def scrape_jobs(session: LinkedInSession) -> list[RawJob]:
+async def scrape_jobs(session: LinkedInSession, user_id: int) -> list[RawJob]:
     """Run the full scraping pipeline: search → list → details → DB.
 
     Sources:
@@ -448,7 +452,7 @@ async def scrape_jobs(session: LinkedInSession) -> list[RawJob]:
     page = session.page
     all_jobs: list[RawJob] = []
 
-    prefs = _load_search_prefs()
+    prefs = _load_search_prefs(user_id)
 
     # ── 1. Keyword search ──────────────────────────────────────────
     # Prefer desired_titles from preferences over hardcoded config
@@ -460,18 +464,18 @@ async def scrape_jobs(session: LinkedInSession) -> list[RawJob]:
 
     for keyword in search_titles:
         for location in search_locations:
-            await _scrape_search(page, keyword, location, all_jobs)
+            await _scrape_search(page, keyword, location, all_jobs, user_id)
 
     # ── 2. Network filter search ───────────────────────────────────
     if prefs.get("prefer_connection_companies"):
         for keyword in search_titles:
             for location in search_locations:
-                await _scrape_search(page, keyword, location, all_jobs,
+                await _scrape_search(page, keyword, location, all_jobs, user_id,
                                      network_filter=True)
 
     # ── 3. Target company pages ────────────────────────────────────
     for company in prefs.get("target_companies", []):
-        await _scrape_company_page(page, company, all_jobs)
+        await _scrape_company_page(page, company, all_jobs, user_id)
 
     # ── 4. Connection companies ────────────────────────────────────
     connection_urls = prefs.get("linkedin_connections", [])
@@ -480,11 +484,11 @@ async def scrape_jobs(session: LinkedInSession) -> list[RawJob]:
         company = await _resolve_connection_company(page, url)
         if company and company not in resolved_companies:
             resolved_companies.add(company)
-            await _scrape_company_page(page, company, all_jobs)
+            await _scrape_company_page(page, company, all_jobs, user_id)
 
     # Save resolved connection companies so the scorer can apply referral boosts
     if resolved_companies:
-        prefs_path = Path(settings.output_dir) / "user_preferences.json"
+        prefs_path = Path(settings.output_dir) / f"user_preferences_{user_id}.json"
         try:
             current = json.loads(prefs_path.read_text()) if prefs_path.exists() else {}
             current["_resolved_connection_companies"] = sorted(resolved_companies)

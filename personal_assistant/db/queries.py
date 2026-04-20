@@ -14,16 +14,19 @@ from personal_assistant.db.models import (
 )
 
 
-def upsert_job(linkedin_job_id: str, **fields) -> Job:
-    """Insert a job or return existing one (dedup by linkedin_job_id)."""
+def upsert_job(linkedin_job_id: str, user_id: int, **fields) -> Job:
+    """Insert a job or return existing one (dedup by linkedin_job_id + user_id)."""
     session = get_session()
     try:
         job = session.execute(
-            select(Job).where(Job.linkedin_job_id == linkedin_job_id)
+            select(Job).where(
+                Job.linkedin_job_id == linkedin_job_id,
+                Job.user_id == user_id,
+            )
         ).scalar_one_or_none()
         if job:
             return job
-        job = Job(linkedin_job_id=linkedin_job_id, **fields)
+        job = Job(linkedin_job_id=linkedin_job_id, user_id=user_id, **fields)
         session.add(job)
         session.commit()
         session.refresh(job)
@@ -45,24 +48,29 @@ def update_job_status(job_id: int, status: JobStatus, **extra_fields) -> None:
         session.close()
 
 
-def get_jobs_by_status(status: JobStatus) -> list[Job]:
+def get_jobs_by_status(status: JobStatus, user_id: int) -> list[Job]:
     session = get_session()
     try:
         result = session.execute(
-            select(Job).where(Job.status == status).order_by(Job.discovered_at.desc())
+            select(Job).where(
+                Job.status == status,
+                Job.user_id == user_id,
+            ).order_by(Job.discovered_at.desc())
         ).scalars().all()
-        # Detach from session so callers can use them
         session.expunge_all()
         return list(result)
     finally:
         session.close()
 
 
-def get_job_by_id(job_id: int) -> Job | None:
+def get_job_by_id(job_id: int, user_id: int | None = None) -> Job | None:
+    """Fetch a job by ID. Pass user_id to enforce ownership."""
     session = get_session()
     try:
         job = session.get(Job, job_id)
         if job:
+            if user_id is not None and job.user_id != user_id:
+                return None
             session.expunge(job)
         return job
     finally:
@@ -138,12 +146,12 @@ def update_message_status(message_id: int, status: MessageStatus, **extra) -> No
 
 # ── Dashboard queries ─────────────────────────────────────────────────────────
 
-def get_all_jobs() -> list[Job]:
-    """Return all jobs ordered by discovered_at desc."""
+def get_all_jobs(user_id: int) -> list[Job]:
+    """Return all jobs for a user ordered by discovered_at desc."""
     session = get_session()
     try:
         result = session.execute(
-            select(Job).order_by(Job.discovered_at.desc())
+            select(Job).where(Job.user_id == user_id).order_by(Job.discovered_at.desc())
         ).scalars().all()
         session.expunge_all()
         return list(result)
@@ -151,12 +159,14 @@ def get_all_jobs() -> list[Job]:
         session.close()
 
 
-def get_job_detail(job_id: int) -> dict | None:
+def get_job_detail(job_id: int, user_id: int | None = None) -> dict | None:
     """Return a job with its contacts, messages, and applications."""
     session = get_session()
     try:
         job = session.get(Job, job_id)
         if not job:
+            return None
+        if user_id is not None and job.user_id != user_id:
             return None
 
         contacts = session.execute(
@@ -243,12 +253,14 @@ def update_job_notes(job_id: int, notes: str) -> None:
         session.close()
 
 
-def delete_job(job_id: int) -> bool:
+def delete_job(job_id: int, user_id: int | None = None) -> bool:
     """Permanently delete a job and its related contacts/messages."""
     session = get_session()
     try:
         job = session.get(Job, job_id)
         if not job:
+            return False
+        if user_id is not None and job.user_id != user_id:
             return False
         # Delete related contacts and messages
         contacts = session.scalars(select(Contact).where(Contact.job_id == job_id)).all()

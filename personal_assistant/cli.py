@@ -21,8 +21,13 @@ def setup_logging():
 def cmd_scrape(args):
     """Run the discovery pipeline once."""
     from personal_assistant.pipeline import run_discovery_pipeline
-
-    asyncio.run(run_discovery_pipeline())
+    from personal_assistant.db.models import get_session, User
+    from sqlalchemy import select
+    s = get_session()
+    admin = s.execute(select(User).where(User.is_admin == True)).scalar_one_or_none()
+    s.close()
+    uid = admin.id if admin else 1
+    asyncio.run(run_discovery_pipeline(uid))
 
 
 def cmd_cv(args):

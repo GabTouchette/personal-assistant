@@ -180,22 +180,28 @@ if _OUTPUT_DIR.exists():
 # Source CV files
 _CV_DIR = Path(__file__).resolve().parent.parent / "cv"
 
-# User preferences file
-_PREFS_PATH = Path(__file__).resolve().parent.parent.parent / "output" / "user_preferences.json"
+# User preferences — per-user JSON files
+_OUTPUT_BASE = Path(__file__).resolve().parent.parent.parent / "output"
 
 
-def _load_prefs() -> dict | None:
-    if _PREFS_PATH.exists():
+def _prefs_path(user_id: int) -> Path:
+    return _OUTPUT_BASE / f"user_preferences_{user_id}.json"
+
+
+def _load_prefs(user_id: int) -> dict | None:
+    p = _prefs_path(user_id)
+    if p.exists():
         try:
-            return json.loads(_PREFS_PATH.read_text())
+            return json.loads(p.read_text())
         except Exception:
             pass
     return None
 
 
-def _save_prefs(prefs: dict) -> None:
-    _PREFS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _PREFS_PATH.write_text(json.dumps(prefs, indent=2, ensure_ascii=False))
+def _save_prefs(prefs: dict, user_id: int) -> None:
+    p = _prefs_path(user_id)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(prefs, indent=2, ensure_ascii=False))
 
 
 # ── Kanban column mapping ────────────────────────────────────────────────────
@@ -262,7 +268,8 @@ COLUMN_STATUSES = [
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     init_db()
-    jobs = get_all_jobs()
+    user = request.state.user
+    jobs = get_all_jobs(user.id)
 
     # Build columns
     columns_data = []
@@ -294,7 +301,7 @@ async def dashboard(request: Request):
             label = "CV (English)" if f.name == "base_cv.yaml" else "CV (French)" if "_fr" in f.name else f.stem
             cv_files.append({"name": label, "filename": f.name, "path": f"/api/cv-source/{f.name}"})
 
-    prefs = _load_prefs()
+    prefs = _load_prefs(user.id)
 
     # Connection status
     linkedin_connected = _is_linkedin_connected()
@@ -319,14 +326,16 @@ async def dashboard(request: Request):
         "linkedin_connected": linkedin_connected,
         "telegram_connected": telegram_connected,
         "gmail_connected": gmail_connected,
+        "current_username": user.username,
     })
 
 
 # ── API endpoints ─────────────────────────────────────────────────────────────
 
 @app.get("/api/jobs/{job_id}")
-async def api_job_detail(job_id: int):
-    detail = get_job_detail(job_id)
+async def api_job_detail(job_id: int, request: Request):
+    user = request.state.user
+    detail = get_job_detail(job_id, user.id)
     if not detail:
         return JSONResponse({"error": "not found"}, status_code=404)
     return detail
@@ -334,6 +343,9 @@ async def api_job_detail(job_id: int):
 
 @app.post("/api/jobs/{job_id}/status")
 async def api_update_status(job_id: int, request: Request):
+    user = request.state.user
+    if not get_job_by_id(job_id, user.id):
+        return JSONResponse({"error": "not found"}, status_code=404)
     data = await request.json()
     new_status = data.get("status")
     interview_date = data.get("interview_date")
@@ -351,6 +363,9 @@ async def api_update_status(job_id: int, request: Request):
 
 @app.post("/api/jobs/{job_id}/notes")
 async def api_update_notes(job_id: int, request: Request):
+    user = request.state.user
+    if not get_job_by_id(job_id, user.id):
+        return JSONResponse({"error": "not found"}, status_code=404)
     data = await request.json()
     notes = data.get("notes", "")
     update_job_notes(job_id, notes)
@@ -358,8 +373,9 @@ async def api_update_notes(job_id: int, request: Request):
 
 
 @app.get("/api/jobs/{job_id}/cv")
-async def api_download_cv(job_id: int):
-    job = get_job_by_id(job_id)
+async def api_download_cv(job_id: int, request: Request):
+    user = request.state.user
+    job = get_job_by_id(job_id, user.id)
     if not job or not job.tailored_cv_path:
         return JSONResponse({"error": "no CV"}, status_code=404)
     path = Path(job.tailored_cv_path)
@@ -371,13 +387,15 @@ async def api_download_cv(job_id: int):
 @app.post("/api/jobs/bulk-status")
 async def api_bulk_status(request: Request):
     """Move multiple jobs to a new status (e.g. send to review)."""
+    user = request.state.user
     data = await request.json()
     job_ids = data.get("job_ids", [])
     new_status = data.get("status")
     if new_status not in [s.value for s in JobStatus]:
         return JSONResponse({"error": "invalid status"}, status_code=400)
     for jid in job_ids:
-        update_job_status(int(jid), JobStatus(new_status))
+        if get_job_by_id(int(jid), user.id):
+            update_job_status(int(jid), JobStatus(new_status))
     return {"ok": True, "count": len(job_ids)}
 
 
@@ -412,9 +430,10 @@ async def api_save_cv_source(filename: str, request: Request):
 # ── Delete job endpoint ───────────────────────────────────────────────────────
 
 @app.delete("/api/jobs/{job_id}")
-async def api_delete_job(job_id: int):
+async def api_delete_job(job_id: int, request: Request):
     """Permanently delete a job from the database."""
-    deleted = delete_job(job_id)
+    user = request.state.user
+    deleted = delete_job(job_id, user.id)
     if not deleted:
         return JSONResponse({"error": "not found"}, status_code=404)
     return {"ok": True}
@@ -507,8 +526,9 @@ async def api_cv_extract_prefs():
     }
 
 @app.get("/api/preferences")
-async def api_get_preferences():
-    prefs = _load_prefs()
+async def api_get_preferences(request: Request):
+    user = request.state.user
+    prefs = _load_prefs(user.id)
     if not prefs:
         return JSONResponse({"exists": False})
     return {"exists": True, **prefs}
@@ -516,8 +536,9 @@ async def api_get_preferences():
 
 @app.post("/api/preferences")
 async def api_save_preferences(request: Request):
+    user = request.state.user
     data = await request.json()
-    _save_prefs(data)
+    _save_prefs(data, user.id)
 
     # Update keyword scorer weights from preference weights
     _apply_prefs_to_scorer(data)
@@ -712,9 +733,10 @@ async def api_connect_gmail(request: Request):
 # ── Pipeline trigger endpoint ────────────────────────────────────────────────
 
 @app.post("/api/jobs/{job_id}/run-plan")
-async def api_run_plan(job_id: int):
+async def api_run_plan(job_id: int, request: Request):
     """Trigger the CV + outreach pipeline for a job (like Telegram Apply)."""
-    job = get_job_by_id(job_id)
+    user = request.state.user
+    job = get_job_by_id(job_id, user.id)
     if not job:
         return JSONResponse({"error": "not found"}, status_code=404)
     try:
@@ -731,22 +753,24 @@ async def api_run_plan(job_id: int):
 @app.post("/api/jobs/send-to-review")
 async def api_send_to_review(request: Request):
     """Move jobs to notified and send Telegram notifications."""
+    user = request.state.user
     data = await request.json()
     job_ids = data.get("job_ids", [])
 
     if not job_ids:
         return JSONResponse({"ok": False, "message": "No jobs selected"}, status_code=400)
 
-    # Update status
+    # Only update jobs owned by this user
     for jid in job_ids:
-        update_job_status(int(jid), JobStatus.NOTIFIED)
+        if get_job_by_id(int(jid), user.id):
+            update_job_status(int(jid), JobStatus.NOTIFIED)
 
     # Send via Telegram if connected
     if _is_telegram_connected():
         try:
             from personal_assistant.notifier.telegram import send_job_notification
             for jid in job_ids:
-                job = get_job_by_id(int(jid))
+                job = get_job_by_id(int(jid), user.id)
                 if job:
                     await send_job_notification(job)
         except Exception:
