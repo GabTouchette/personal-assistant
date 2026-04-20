@@ -28,6 +28,8 @@ _haiku = anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
 HTML = "HTML"
 
+from personal_assistant.server.auth import get_user_by_telegram_chat_id
+
 # Per-user state: which job they're asking about
 _asking_about: dict[int, int] = {}  # chat_id -> job_id
 
@@ -36,9 +38,10 @@ _asking_about: dict[int, int] = {}  # chat_id -> job_id
 _conversation_ctx: dict[int, dict] = {}
 
 
-def _authorized(update: Update) -> bool:
-    """Only allow the configured chat ID to interact."""
-    return str(update.effective_chat.id) == str(settings.telegram_chat_id)
+def _get_user_for_chat(update: Update):
+    """Return the User linked to this Telegram chat, or None if unregistered."""
+    chat_id = str(update.effective_chat.id)
+    return get_user_by_telegram_chat_id(chat_id)
 
 
 # ── Haiku chat ────────────────────────────────────────────────────────────────
@@ -60,10 +63,15 @@ def _ask_haiku(message: str, system: str = "") -> str:
 # ── /start command ────────────────────────────────────────────────────────────
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
+    user = _get_user_for_chat(update)
+    if not user:
+        await update.message.reply_text(
+            "\u26a0\ufe0f This Telegram account is not linked to any dashboard user.\n\n"
+            "Log in to the dashboard, go to Settings \u2192 Connect Telegram, and click \u2018Link this account\u2019."
+        )
         return
     await update.message.reply_text(
-        "<b>LinkedIn Job Agent</b>\n\n"
+        f"<b>LinkedIn Job Agent</b> \u2014 <i>{user.username}</i>\n\n"
         "<b>Commands</b>\n"
         "\u2022 /status \u2014 pipeline stats\n"
         "\u2022 /pending \u2014 jobs awaiting review\n"
@@ -77,13 +85,15 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # ── /status command ───────────────────────────────────────────────────────────
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
+    user = _get_user_for_chat(update)
+    if not user:
+        await update.message.reply_text("Account not linked. Use /start for instructions.")
         return
     from personal_assistant.db.models import JobStatus
 
     counts = {}
     for status in JobStatus:
-        jobs = get_jobs_by_status(status)
+        jobs = get_jobs_by_status(status, user.id)
         if jobs:
             counts[status.value] = len(jobs)
 
@@ -100,10 +110,12 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 # ── /pending command ──────────────────────────────────────────────────────────
 
 async def cmd_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
+    user = _get_user_for_chat(update)
+    if not user:
+        await update.message.reply_text("Account not linked. Use /start for instructions.")
         return
 
-    jobs = get_jobs_by_status(JobStatus.NOTIFIED)
+    jobs = get_jobs_by_status(JobStatus.NOTIFIED, user.id)
     if not jobs:
         await update.message.reply_text("<i>No pending jobs to review.</i>", parse_mode=HTML)
         return
@@ -119,19 +131,15 @@ async def cmd_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 # ── /run command ──────────────────────────────────────────────────────────────
 
 async def cmd_run(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
+    user = _get_user_for_chat(update)
+    if not user:
+        await update.message.reply_text("Account not linked. Use /start for instructions.")
         return
     await update.message.reply_text("<b>Starting discovery pipeline...</b>\n<i>This may take a few minutes.</i>", parse_mode=HTML)
 
     from personal_assistant.pipeline import run_discovery_pipeline
-    from personal_assistant.db.models import get_session, User
-    from sqlalchemy import select
     try:
-        s = get_session()
-        admin = s.execute(select(User).where(User.is_admin == True)).scalar_one_or_none()
-        s.close()
-        uid = admin.id if admin else 1
-        await run_discovery_pipeline(uid)
+        await run_discovery_pipeline(user.id)
         await update.message.reply_text("\u2705 <b>Discovery pipeline complete!</b>", parse_mode=HTML)
     except Exception as e:
         logger.error("Pipeline error: %s", e)
@@ -143,45 +151,48 @@ async def cmd_run(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    if not _authorized(update):
-        await query.answer("Unauthorized")
-        return
-
-    await query.answer()  # dismiss the loading spinner
 
     data = query.data  # e.g. "apply:42", "skip:42", "user_approve:5"
     parts = data.split(":", 1)
     if len(parts) != 2:
+        await query.answer()
         return
 
     action, value_str = parts
 
-    # ── User approval/rejection ─────────────────────────────────────
+    # ── User approval/rejection (admin action, no user lookup required) ──────
     if action in ("user_approve", "user_reject"):
+        await query.answer()
         from personal_assistant.server.auth import approve_user, reject_user, get_user_by_id
         try:
             uid = int(value_str)
         except ValueError:
             return
-        user = get_user_by_id(uid)
-        if not user:
+        target = get_user_by_id(uid)
+        if not target:
             await query.edit_message_text("User not found.")
             return
         if action == "user_approve":
             approve_user(uid)
-            await query.edit_message_text(f"✅ <b>{user.username}</b> has been approved.", parse_mode="HTML")
+            await query.edit_message_text(f"✅ <b>{target.username}</b> has been approved.", parse_mode="HTML")
         else:
             reject_user(uid)
-            await query.edit_message_text(f"❌ <b>{user.username}</b> has been rejected.", parse_mode="HTML")
+            await query.edit_message_text(f"❌ <b>{target.username}</b> has been rejected.", parse_mode="HTML")
         return
 
-    # ── Job actions ─────────────────────────────────────────────────
+    # ── Job actions — require a linked account ───────────────────────────────
+    user = _get_user_for_chat(update)
+    if not user:
+        await query.answer("Account not linked to dashboard", show_alert=True)
+        return
+    await query.answer()  # dismiss the loading spinner
+
     try:
         job_id = int(value_str)
     except ValueError:
         return
 
-    job = get_job_by_id(job_id)
+    job = get_job_by_id(job_id, user.id)
     if not job:
         await query.edit_message_text(f"Job #{job_id} not found.")
         return
@@ -430,8 +441,9 @@ async def _easy_apply_only_safe(job_id: int, chat_id: int, context: ContextTypes
 # ── Free-text handler ─────────────────────────────────────────────────────────
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
-        return
+    user = _get_user_for_chat(update)
+    if not user:
+        return  # silently ignore unknown accounts
 
     text = update.message.text.strip()
     chat_id = update.effective_chat.id
@@ -442,7 +454,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         job_id = ctx["job_id"]
         mode = ctx["mode"]
         desc = ctx.get("description", "")
-        job = get_job_by_id(job_id)
+        job = get_job_by_id(job_id, user.id)
 
         if not job:
             _conversation_ctx.pop(chat_id, None)

@@ -31,6 +31,7 @@ from personal_assistant.server.auth import (
     get_pending_users,
     get_user_by_username,
     reject_user,
+    set_user_telegram_chat_id,
     user_count,
     verify_password,
 )
@@ -305,7 +306,7 @@ async def dashboard(request: Request):
 
     # Connection status
     linkedin_connected = _is_linkedin_connected()
-    telegram_connected = _is_telegram_connected()
+    telegram_connected = _is_telegram_connected(user)
     gmail_connected = _is_gmail_connected()
 
     return templates.TemplateResponse(request, "dashboard.html", {
@@ -593,10 +594,15 @@ def _is_linkedin_connected() -> bool:
     return storage.exists() and storage.stat().st_size > 100
 
 
-def _is_telegram_connected() -> bool:
-    """Check if Telegram bot token & chat ID are configured."""
+def _is_telegram_connected(user=None) -> bool:
+    """Check if Telegram is configured: bot token globally + chat_id for this user."""
     from personal_assistant.config import settings
-    return bool(settings.telegram_bot_token) and bool(settings.telegram_chat_id)
+    if not settings.telegram_bot_token:
+        return False
+    if user is not None:
+        return bool(user.telegram_chat_id)
+    # Fallback: check global chat ID (legacy)
+    return bool(settings.telegram_chat_id)
 
 
 def _is_gmail_connected() -> bool:
@@ -674,10 +680,11 @@ async def api_connect_telegram(request: Request):
 
 
 @app.get("/api/connect/status")
-async def api_connection_status():
+async def api_connection_status(request: Request):
+    user = request.state.user
     return {
         "linkedin": _is_linkedin_connected(),
-        "telegram": _is_telegram_connected(),
+        "telegram": _is_telegram_connected(user),
         "gmail": _is_gmail_connected(),
     }
 

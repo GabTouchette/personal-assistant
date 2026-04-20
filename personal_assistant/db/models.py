@@ -165,6 +165,7 @@ class User(Base):
     password_hash = Column(String(256), nullable=False)
     is_approved = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
+    telegram_chat_id = Column(String(64), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     jobs = relationship("Job", back_populates="user")
@@ -191,6 +192,11 @@ def init_db():
             conn.execute(f"ALTER TABLE jobs ADD COLUMN {col} {coltype}")
         except sqlite3.OperationalError:
             pass  # column already exists
+    # Users table migrations
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN telegram_chat_id TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.close()
 
 

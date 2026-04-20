@@ -92,7 +92,47 @@ def reject_user(user_id: int) -> bool:
         session.close()
 
 
+def get_user_by_telegram_chat_id(chat_id: str) -> "User | None":
+    session = get_session()
+    try:
+        return session.execute(
+            select(User).where(User.telegram_chat_id == str(chat_id))
+        ).scalar_one_or_none()
+    finally:
+        session.close()
+
+
+def set_user_telegram_chat_id(user_id: int, chat_id: str) -> None:
+    session = get_session()
+    try:
+        user = session.get(User, user_id)
+        if user:
+            user.telegram_chat_id = str(chat_id)
+            session.commit()
+    finally:
+        session.close()
+
+
 def get_pending_users() -> list[User]:
+    session = get_session()
+    try:
+        result = session.execute(
+            select(User).where(User.is_approved == False)
+        ).scalars().all()
+        session.expunge_all()
+        return list(result)
+    finally:
+        session.close()
+
+
+def user_count() -> int:
+    session = get_session()
+    try:
+        return session.execute(select(User)).scalars().all().__len__()
+    finally:
+        session.close()
+
+
     session = get_session()
     try:
         result = session.execute(

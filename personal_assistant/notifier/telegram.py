@@ -131,14 +131,26 @@ def _job_keyboard(job: Job) -> InlineKeyboardMarkup:
 
 
 async def send_job_notification(job: Job) -> bool:
-    """Send a Telegram message with job details + inline buttons."""
+    """Send a Telegram message with job details + inline buttons to the job owner."""
     bot = _bot()
     text = _format_job_message(job)
     keyboard = _job_keyboard(job)
 
+    # Route to job owner's personal chat ID if set, else fallback to global
+    chat_id = settings.telegram_chat_id
+    if job.user_id:
+        from personal_assistant.server.auth import get_user_by_id
+        owner = get_user_by_id(job.user_id)
+        if owner and owner.telegram_chat_id:
+            chat_id = owner.telegram_chat_id
+
+    if not chat_id:
+        logger.warning("No Telegram chat ID for job %d (user_id=%s)", job.id, job.user_id)
+        return False
+
     try:
         await bot.send_message(
-            chat_id=settings.telegram_chat_id,
+            chat_id=chat_id,
             text=text,
             parse_mode=HTML,
             reply_markup=keyboard,
